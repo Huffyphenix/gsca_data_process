@@ -1,0 +1,11 @@
+#########Method:
+use lm(expr ~ cnv) to calculate the relationship between genes' expression and cnv percentage.
+expr = log2(expr + 1)
+cnv data is raw data, from 0-1.
+fdr= p.adjust(p.value, method = "fdr")
+ars = adjust r.squared value.
+filtered by fdr <= 0.05
+
+Cancer, symbol, ars , fdr information are remained to use.
+Data stored in /data/GSCALite/TCGA/cnv/pancan34_all_gene_exp-cor-cnv.rds.gz
+

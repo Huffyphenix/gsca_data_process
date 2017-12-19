@@ -1,0 +1,61 @@
+#!/usr/bin/Rscript
+
+# read data in ------
+library(magrittr)
+
+config <-list(database="/data/GSCALite")
+cnv <- readr::read_rds(file.path(config$database, "TCGA","cnv","pancan34_cnv_threshold.rds.gz"))
+
+#all_gene_list <- cnv$cnv[[1]]["symbol"] %>% head
+
+
+
+# functions ---------------------------------------------------------------
+fn_get_amplitue_threshold <- function(.x){
+  tibble::tibble(
+    a_total = sum(.x > 0) / length(.x), 
+    d_total = sum(.x < 0) / length(.x),
+    a_homo = sum(.x == 2) / length(.x),
+    d_homo = sum(.x == -2) / length(.x),
+    a_hete = sum(.x == 1) / length(.x),
+    d_hete = sum(.x == -1) / length(.x),
+    other = 1 - a_total - d_total)
+}
+
+fn_get_ad <- function(.d){
+  .d %>% 
+    unlist(use.name = F) %>% 
+    fn_get_amplitue_threshold()
+}
+fn_get_percent <- function(cancer_types, cnv){
+  cnv %>%
+    tidyr::nest(-symbol) %>% 
+    dplyr::mutate(ad = purrr::map(data, .f = fn_get_ad)) %>% 
+    dplyr::select(-data) %>% 
+    tidyr::unnest(ad) %>% 
+    tibble::add_column(cancer_types = cancer_types, .before = 1)
+}
+
+# calculation ------------------------------------------------------------
+cl <- 34
+cluster <- multidplyr::create_cluster(core=cl)
+
+cnv %>%
+  multidplyr::partition(cluster = cluster) %>%
+  multidplyr::cluster_library("magrittr") %>%
+  multidplyr::cluster_library("tidyverse") %>%
+  multidplyr::cluster_assign_value("fn_get_amplitue_threshold",fn_get_amplitue_threshold) %>%
+  multidplyr::cluster_assign_value("fn_get_percent",fn_get_percent) %>%
+  multidplyr::cluster_assign_value("fn_get_ad",fn_get_ad) %>%
+  dplyr::mutate(rs = purrr::map2(cancer_types,cnv,fn_get_percent)) %>%
+  dplyr::collect() %>%
+  dplyr::as_tibble() %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-PARTITION_ID) %>%
+  dplyr::select(-cancer_types,-cnv) %>%
+  tidyr::unnest(rs) %>%
+  tidyr::nest(symbol,a_total,d_total,a_hete,d_hete,a_homo,d_homo,other,.key=cnv) ->gene_list_cnv_per
+
+parallel::stopCluster(cluster)
+
+readr::write_rds(gene_list_cnv_per,"/data/GSCALite/TCGA/cnv/pancan34_cnv_percent.rds.gz",compress = 'gz')
