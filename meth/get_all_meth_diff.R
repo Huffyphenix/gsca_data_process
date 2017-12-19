@@ -1,0 +1,148 @@
+# !/usr/bin/Rscript
+# load meth data ----------------------------------------------------------
+
+methy <- readr::read_rds(file.path("/data/TCGA/TCGA_data/pancan33_meth.rds.gz"))
+out_path <- c("/data/GSCALite/TCGA/meth")
+methy_box <- file.path(out_path, "boxplot")
+# functions ---------------------------------------------------------------
+library(magrittr)
+
+fun_barcode <- function(.b) {
+  stringr::str_sub(
+    string = .b,
+    start = 1,
+    end = 12
+  )
+}
+fun_tn_type <- function(.b) {
+  type <- .b %>%
+    stringr::str_split(pattern = "-", simplify = T) %>%
+    .[, 4] %>%
+    stringr::str_sub(1, 2)
+}
+
+fun_boxplot <- function(fig_name, data, path = methy_box) {
+  data %>%
+    ggpubr::ggboxplot(x = "type", y = "meth", color = "type", pallete = "jco") +
+    ggpubr::stat_compare_means(
+      method = "t.test",
+      label.y = 1,
+      label.x = 1.2
+    ) +
+    ggthemes::theme_gdocs() +
+    scale_color_manual(values = c("#DC3912", "#3366CC")) +
+    labs(y = "B-value", x = "", title = fig_name) -> p
+  filename <- paste(fig_name, "png", sep = ".")
+  ggsave(filename = filename, p, device = "png", path = path, width = 4, height = 3)
+}
+
+fun_compare <- function(.x, .y) {
+  .x %>%
+    dplyr::mutate(gene = as.character(gene)) %>%
+    tidyr::gather(key = barcode, value = meth, -symbol, -gene) %>%
+    dplyr::mutate(type = fun_tn_type(barcode)) %>%
+    dplyr::filter(type %in% c("01", "11")) %>%
+    dplyr::mutate(barcode = fun_barcode(barcode)) %>%
+    dplyr::select(symbol, gene, barcode, meth, type) %>%
+    dplyr::mutate(type = dplyr::case_when(
+      type == "01" ~ "Tumor",
+      type == "11" ~ "Normal"
+    )) %>%
+    dplyr::filter(!is.na(gene)) %>%
+    tidyr::drop_na() -> .d
+  if (nrow(.d) < 20 || length(unique(.d$type)) != 2) {
+    return(tibble::tibble())
+  }
+  # at least 10 samples
+  .d %>%
+    dplyr::select(barcode, type) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(type) %>%
+    dplyr::count() %>%
+    dplyr::pull(n) -> sample_num
+  if (any(sample_num < 10)) {
+    return(tibble::tibble())
+  }
+
+  .d %>%
+    dplyr::group_by(symbol, gene) %>%
+    dplyr::do(
+      broom::tidy(
+        t.test(meth ~ type, data = .)
+      )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(fdr = p.adjust(p.value, method = "fdr")) %>%
+    dplyr::filter(fdr < 0.05) %>%
+    dplyr::mutate(fdr = -log10(fdr)) %>%
+    dplyr::mutate(fdr = ifelse(fdr > 50, 50, fdr)) %>%
+    dplyr::mutate(
+      direction = dplyr::case_when(
+        estimate > 0 ~ "Down", # normal high
+        estimate < 0 ~ "Up" # tumor high
+      )
+    ) %>%
+    dplyr::select(symbol, gene, direction, p_val = p.value, fdr) -> .d_out
+
+  .d %>%
+    dplyr::group_by(symbol, type) %>%
+    dplyr::summarise(m = mean(meth)) %>%
+    tidyr::spread(key = type, value = m) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(diff = Tumor - Normal) %>%
+    dplyr::select(symbol, diff) %>%
+    dplyr::inner_join(.d_out, by = "symbol") -> .d_out_diff
+
+  # draw every pic
+  # .d %>%
+  #   dplyr::semi_join(.d_out, by = c("symbol", "gene")) %>%
+  #   tidyr::nest(-symbol, -gene) %>%
+  #   dplyr::mutate(fig_name = paste(.y, symbol, sep = "_")) %>%
+  #   dplyr::select(fig_name, data) %>%
+  #   purrr::pwalk(.f = fun_boxplot, path = methy_box)
+
+  return(.d_out_diff)
+}
+
+
+# calculate ---------------------------------------------------------------
+# filter_gene_list <- function(.x, gene_list) {
+#   gene_list %>%
+#     dplyr::select(symbol) %>%
+#     dplyr::left_join(.x, by = "symbol")
+# }
+# gene_list <- data.frame(symbol=c("TP53","EZH2","CD274","CD276","CD80",
+#            "CD86","VTCN1","CD40LG","TNFRSF14",
+#            "TNFSF9","TNFSF4","CD70","ICOS",
+#            "BTLA","LAG3","TNFRSF9","TNFRSF4"))
+# methy %>% dplyr::slice(1) %>%
+#   # dplyr::slice(2:5) %>%  # tidyr::unnest()
+#   dplyr::mutate(filter_methy = purrr::map(methy, filter_gene_list, gene_list = gene_list)) %>%
+#   dplyr::select(-methy) -> gene_list_methy
+#
+# gene_list_methy %>%
+#   dplyr::mutate(methy_comparison = purrr::map(.x = filter_methy, .y = cancer_types, .f = fun_compare)) %>%
+#   dplyr::select(-filter_methy) %>%
+#   tidyr::unnest()
+
+cl <- 33
+cluster <- multidplyr::create_cluster(cl)
+methy %>%
+  multidplyr::partition(cluster = cluster) %>%
+  multidplyr::cluster_library("magrittr") %>%
+  multidplyr::cluster_library("ggplot2") %>%
+  multidplyr::cluster_assign_value("fun_barcode", fun_barcode) %>%
+  multidplyr::cluster_assign_value("fun_tn_type", fun_tn_type) %>%
+  # multidplyr::cluster_assign_value("fun_boxplot", fun_boxplot) %>%
+  multidplyr::cluster_assign_value("fun_compare", fun_compare) %>%
+  # multidplyr::cluster_assign_value("methy_box", methy_box) %>%
+  dplyr::mutate(methy_comparison = purrr::map(.x = methy, .y = cancer_types, .f = fun_compare)) %>%
+  dplyr::collect() %>%
+  dplyr::as_tibble() %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-PARTITION_ID) %>%
+  dplyr::select(-methy) -> gene_methy_fdr
+on.exit(parallel::stopCluster(cluster))
+
+gene_methy_fdr %>%
+  readr::write_rds(file.path(out_path,"pan33_allgene_methy_diff.rds.gz"),compress="gz")
