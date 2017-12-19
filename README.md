@@ -34,7 +34,7 @@ fdr = ifelse(fdr > 50, 50, fdr)
 filtered by filter(fdr < 0.05)
 direction = estimate > 0 ~ "Down", # normal high
         estimate < 0 ~ "Up" # tumor high
-
+when diff methy is get, cancers with less than 10 normal-tumor paired sample will be droped, and only 14 cancers are remained with diff data.
 
 
 2. methy correlate with gene expression
