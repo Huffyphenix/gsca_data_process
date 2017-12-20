@@ -15,8 +15,7 @@ colnames(expr)[2] <-"filter_expr"
 #   dplyr::mutate(filter_cnv = purrr::map(cnv, filter_gene_list, gene_list = gene_list)) %>%
 #   dplyr::select(-cnv) -> gene_list_cnv
 # methy %>%
-#   dplyr::mutate(filter_methy = purrr::map(methy, filter_gene_list, gene_list = gene_list)) %>%
-#   dplyr::select(-methy) -> gene_list_methy
+#   dplyr::mutate(filter_methy = purrr::map(filter_methy, filter_gene_list, gene_list = gene_list)) -> gene_list_methy
 # functions ---------------------------------------------------------------
 
 filter_gene_list <- function(.x, gene_list) {
@@ -51,11 +50,16 @@ fn_transform_meth <- function(.d){
     dplyr::select(-barcode,-gene)
 }
 
-# gene_list_methy %>% 
-#   dplyr::mutate(filter_methy = purrr::map(.x = filter_methy, .f = fn_transform)) %>% 
-#   tidyr::unnest() %>% 
-#   dplyr::filter(! is.na(value)) %>% 
+# methy %>%
+#   head() %>%
+#   dplyr::mutate(filter_methy = purrr::map(filter_methy, filter_gene_list, gene_list = gene_list)) -> gene_list_methy
+
+# gene_list_methy %>%
+#   dplyr::mutate(filter_methy = purrr::map(.x = filter_methy, .f = fn_transform_meth)) %>%
+#   tidyr::unnest() %>%
+#   dplyr::filter(! is.na(value)) %>%
 #   dplyr::rename(b_val = value) -> methy_df
+
 cl<-15
 cluster <- multidplyr::create_cluster(cl)
 methy %>% 
@@ -85,12 +89,19 @@ fn_transform_exp <- function(.d){
     dplyr::distinct(symbol, sample, .keep_all = T) %>% 
     dplyr::select(-barcode,-entrez_id)
 }
-# gene_list_expr %>% 
-#   dplyr::mutate(filter_expr = purrr::map(.x = filter_expr, .f = fn_transform_exp)) %>% 
-#   tidyr::unnest() %>% 
-#   dplyr::filter(! is.na(value)) %>% 
-#   dplyr::rename(expr = value) %>% 
-#   dplyr::mutate(expr = log2(expr + 1)) -> expr_df
+
+# expr %>%
+#   head() %>%
+#   dplyr::mutate(filter_expr = purrr::map(filter_expr, filter_gene_list, gene_list = gene_list)) -> gene_list_expr
+# gene_list_expr %>%
+#   dplyr::mutate(filter_expr = purrr::map(.x = filter_expr, .f = fn_transform_exp)) %>%
+#   # dplyr::collect() %>%
+#   # dplyr::ungroup() %>%
+#   tidyr::unnest() %>%
+#   # dplyr::select(-PARTITION_ID) %>%
+#   dplyr::filter(! is.na(value)) %>%
+#   dplyr::rename(expr = value) %>%
+#   dplyr::mutate(expr = log2(expr + 1)) ->expr_df
 
 expr %>% 
   multidplyr::partition(cluster = cluster) %>%
@@ -106,7 +117,7 @@ expr %>%
   dplyr::filter(! is.na(value)) %>%
   dplyr::rename(expr = value) %>%
   dplyr::mutate(expr = log2(expr + 1)) ->expr_df
-parallel::stopCluster(cluster)
+
   
 
 
@@ -119,20 +130,56 @@ parallel::stopCluster(cluster)
 
 
 # expression and methylation ----------------------------------------------
-
+fn_get_cor<-function(data){
+  data %>%
+    dplyr::group_by(symbol) %>%
+    dplyr::do(
+      tryCatch(
+        broom::tidy(
+          cor.test(.$expr,.$b_val,method = c("pearson")))
+        )
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(spm=estimate) %>%
+    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
+    dplyr::filter(fdr<=0.05) %>%
+    dplyr::mutate(logfdr=-log10(fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(fdr>50,50,logfdr)) %>%
+    dplyr::select(symbol,spm,logfdr) ->.out
+  return(.out)
+}
 
 df_expr_methy <-
   methy_df %>% 
-  dplyr::inner_join(expr_df, by = c("cancer_types", "symbol", "sample"))
+  dplyr::inner_join(expr_df, by = c("cancer_types", "symbol", "sample")) %>%
+  tidyr::nest(symbol,b_val,sample,expr,.key="data")
+df_expr_methy %>%
+  dplyr::mutate(spm=purrr::map(data,fn_get_cor)) %>%
+  dplyr::as_tibble() %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-data)->df_expr_methy_cor
 
-df_expr_methy %>% 
-  dplyr::group_by(cancer_types, symbol) %>% 
-  dplyr::do(broom::glance(lm(expr ~ b_val, data = .))) %>% 
-  dplyr::mutate(fdr = p.adjust(p.value, method = "fdr")) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::select(cancer_types, symbol, ars = adj.r.squared, fdr) %>%
-  dplyr::filter(fdr<=0.05) %>%
-  tidyr::nest(symbol,ars,fdr,.key="cnv_exp") -> df_expr_methy_cor
+df_expr_methy %>%
+  multidplyr::partition(cluster = cluster) %>%
+  multidplyr::cluster_library("magrittr") %>%
+  multidplyr::cluster_assign_value("fn_get_cor", fn_get_cor)  %>%
+  dplyr::mutate(spm=purrr::map(data,fn_get_cor)) %>%
+  dplyr::collect() %>%
+  dplyr::as_tibble() %>%
+  dplyr::ungroup() %>%
+  dplyr::select(-data) %>%
+  dplyr::select(-PARTITION_ID) ->df_expr_methy_cor
+parallel::stopCluster(cluster)
+
+# 
+# df_expr_methy %>% 
+#   dplyr::group_by(cancer_types, symbol) %>% 
+#   dplyr::do(broom::glance(lm(expr ~ b_val, data = .))) %>% 
+#   dplyr::mutate(fdr = p.adjust(p.value, method = "fdr")) %>% 
+#   dplyr::ungroup() %>% 
+#   dplyr::select(cancer_types, symbol, ars = adj.r.squared, fdr) %>%
+#   dplyr::filter(fdr<=0.05) %>%
+#   tidyr::nest(symbol,ars,fdr,.key="cnv_exp") -> df_expr_methy_cor
 
 df_expr_methy_cor %>%
   readr::write_rds("/data/GSCALite/TCGA/meth/pancan34_all_gene_exp-cor-meth.rds.gz",compress="gz")
