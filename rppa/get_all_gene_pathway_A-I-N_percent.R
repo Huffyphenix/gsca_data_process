@@ -121,34 +121,48 @@ gene_rppa %>%
   dplyr::as_tibble() %>%
   dplyr::ungroup() %>%
   dplyr::select(-PARTITION_ID) %>%
-  dplyr::select(-merged_clean) %>%
-  tidyr::unnest() -> gene_rppa_pval 
+  dplyr::select(-merged_clean)  -> gene_rppa_pval 
 parallel::stopCluster(cluster)
 
 gene_rppa_pval %>%
-  dplyr::filter(!is.na(p.value)) %>% 
-  dplyr::mutate(pathway = plyr::revalue(pathway, pathway_replace)) %>% 
-  dplyr::mutate(class = ifelse(fdr < 0.05 & diff > 0, "Activation", "None")) %>% 
-  dplyr::mutate(class = ifelse(fdr < 0.05 & diff < 0, "Inhibition", class)) -> gene_rppa_sig_pval_class
+   readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz",compress = "gz")
+
+gene_rppa_pval <- readr::read_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz")
+
+
+gene_rppa_pval %>%
+  tidyr::unnest() %>%
+  dplyr::filter(fdr <= 0.05) %>%
+  dplyr::mutate(pathway = plyr::revalue(pathway, pathway_replace)) %>%
+  dplyr::mutate(class = ifelse(diff > 0, "Activation", "None")) %>%
+  dplyr::mutate(class = ifelse(diff < 0, "Inhibition", class)) -> gene_rppa_sig_pval_class
 
 gene_rppa_sig_pval_class %>%
+  dplyr::select(cancer_types,symbol,pathway,diff,class) %>%
+  tidyr::nest(-cancer_types) -> gene_rppa_sig_pval_class.simplification
+
+gene_rppa_sig_pval_class.simplification %>%
+  readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_sig_pval_class.siplification.rds.gz",compress = "gz")
+# 
+gene_rppa_sig_pval_class %>%
+  # head(1000) %>%
   dplyr::select("symbol", "pathway", "cancer_types", "class", "p.value", "fdr") %>%
   tidyr::nest(-symbol) %>%
   dplyr::mutate(st = purrr::map2(symbol, data, .f = fn_ai_n)) -> gene_ai_n
-
-
-# output ------------------------------------------------------------------
-
-
-gene_ai_n %>%
-  readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_activate.inhibit_pathway_data.rds.gz",compress = "gz")
-
-gene_ai_n %>%
-  dplyr::select(-data) %>%
-  tidyr::unnest() %>%
-  dplyr::mutate(a=Activation/32,i=Inhibition/32,n=None/32) %>%
-  dplyr::select(symbol, pathway, a, i, n) %>%
-  tidyr::nest(-symbol) ->gene_percent
-
-gene_percent %>%
-  readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz",compress = "gz")
+# 
+# 
+# # output ------------------------------------------------------------------
+# 
+# 
+# gene_ai_n %>%
+#   readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_activate.inhibit_pathway_data.rds.gz",compress = "gz")
+# 
+# gene_ai_n %>%
+#   dplyr::select(-data) %>%
+#   tidyr::unnest() %>%
+#   dplyr::mutate(a=Activation/32,i=Inhibition/32,n=None/32) %>%
+#   dplyr::select(symbol, pathway, a, i, n) %>%
+#   tidyr::nest(-symbol) ->gene_percent
+# 
+# gene_percent %>%
+#   readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz",compress = "gz")

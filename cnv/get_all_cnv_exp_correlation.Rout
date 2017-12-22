@@ -113,21 +113,44 @@ Initialising 33 core cluster.
 +   dplyr::filter(! is.na(value)) %>% 
 +   dplyr::rename(expr = value) %>% 
 +   dplyr::mutate(expr = log2(expr + 1)) -> expr_df
-> parallel::stopCluster(cluster)
+> 
 > # calculate ---------------------------------------------------------------
+> fn_get_cor<-function(data){
++   data %>%
++     dplyr::group_by(symbol) %>%
++     dplyr::do(
++       tryCatch(
++         broom::tidy(
++           cor.test(.$expr,.$cnv,method = c("pearson")))
++       )
++     ) %>%
++     dplyr::ungroup() %>%
++     dplyr::mutate(spm=estimate) %>%
++     dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
++     dplyr::filter(fdr<=0.05) %>%
++     dplyr::mutate(logfdr=-log10(fdr)) %>%
++     dplyr::mutate(logfdr=ifelse(fdr>50,50,fdr)) %>%
++     dplyr::select(symbol,spm,logfdr) ->.out
++   return(.out)
++ }
 > 
 > df_expr_cnv <- 
 +   cnv_df %>% 
-+   dplyr::inner_join(expr_df, by = c("cancer_types", "symbol", "sample"))
++   dplyr::inner_join(expr_df, by = c("cancer_types", "symbol", "sample")) %>%
++   tidyr::nest(symbol,cnv,sample,expr,.key="data")
 > 
 > df_expr_cnv %>%
-+   dplyr::group_by(cancer_types, symbol) %>% 
-+   dplyr::do(broom::glance(lm(expr ~ cnv, data = .))) %>% 
-+   dplyr::mutate(fdr = p.adjust(p.value, method = "fdr")) %>% 
-+   dplyr::ungroup() %>% 
-+   dplyr::select(cancer_types, symbol, ars = adj.r.squared, fdr) %>%
-+   dplyr::filter(fdr<=0.05) %>%
-+   tidyr::nest(symbol,ars,fdr,.key="cnv_exp")-> df_expr_cnv_cor
++   multidplyr::partition(cluster = cluster) %>%
++   multidplyr::cluster_library("magrittr") %>%
++   multidplyr::cluster_assign_value("fn_get_cor", fn_get_cor)  %>%
++   dplyr::mutate(spm=purrr::map(data,fn_get_cor)) %>%
++   dplyr::collect() %>%
++   dplyr::as_tibble() %>%
++   dplyr::ungroup() %>%
++   dplyr::select(-data) %>%
++   dplyr::select(-PARTITION_ID) ->df_expr_cnv_cor
+> parallel::stopCluster(cluster)
+> 
 > 
 > df_expr_cnv_cor %>%
 +   readr::write_rds("/data/GSCALite/TCGA/cnv/pancan34_all_gene_exp-cor-cnv.rds.gz",compress="gz")
@@ -135,4 +158,4 @@ Initialising 33 core cluster.
 > 
 > proc.time()
     user   system  elapsed 
-6231.961  124.479 6964.961 
+2064.453  126.611 2879.951 
