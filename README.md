@@ -43,5 +43,8 @@ fdr is filtered with threshold 0.05.
 
 3. methylation survival difference
 strtified use middle methylation level
-Hyper_worse = ifelse(estimate > 0,  "High","Low")
-## ...
+Hyper_worse estimate > 0  "High","Low"
+## mirna
+1. gene should regulated by mirnas in database
+2. gene should negatively correlated(person, cor<-0.3,p<=0.05) with mirnas in expression
+
