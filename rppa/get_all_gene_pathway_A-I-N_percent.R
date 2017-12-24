@@ -124,33 +124,23 @@ gene_rppa %>%
   dplyr::select(-merged_clean)  -> gene_rppa_pval 
 parallel::stopCluster(cluster)
 
-config <- list()
-config$database <- c("D:/data/GSCALite")
+
 gene_rppa_pval %>%
    readr::write_rds(file.path(config$database,"TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz"),compress = "gz")
 
-gene_rppa_pval <- readr::read_rds(file.path(config$database,"TCGA/rppa/pan32_gene_A-I-N_percent.rds.gz"))
 
 
-gene_rppa_pval %>%
-  tidyr::unnest() %>%
-  # dplyr::filter(fdr <= 0.05) %>%
-  dplyr::mutate(pathway = plyr::revalue(pathway, pathway_replace)) %>%
-  dplyr::mutate(class = ifelse(fdr <= 0.05 & diff > 0, "Activation", "None")) %>%
-  dplyr::mutate(class = ifelse(fdr <= 0.05 & diff < 0, "Inhibition", class)) -> gene_rppa_sig_pval_class
 
-gene_rppa_sig_pval_class %>%
-  dplyr::select(cancer_types,symbol,pathway,diff,class) %>%
-  tidyr::nest(-cancer_types) -> gene_rppa_sig_pval_class.simplification
 
-gene_rppa_sig_pval_class.simplification %>%
-  readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_sig_pval_class.siplification.rds.gz",compress = "gz")
 # 
-gene_rppa_sig_pval_class %>%
-  head(10000) %>%
-  dplyr::select("symbol", "pathway", "cancer_types", "class", "p.value", "fdr") %>%
-  tidyr::nest(-symbol) %>%
-  dplyr::mutate(st = purrr::map2(symbol, data, .f = fn_ai_n)) -> gene_ai_n
+# gene_rppa_sig_pval_class %>%
+#   dplyr::select(cancer_types,symbol,pathway,diff,class) %>%
+#   tidyr::nest(-cancer_types) -> gene_rppa_sig_pval_class.simplification
+# 
+# gene_rppa_sig_pval_class.simplification %>%
+#   readr::write_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_sig_pval_class.siplification.rds.gz",compress = "gz")
+# gene_rppa_sig_pval_class.simplification <- readr::read_rds("/data/GSCALite/TCGA/rppa/pan32_gene_A-I-N_sig_pval_class.siplification.rds.gz")
+
 # 
 # 
 # # output ------------------------------------------------------------------
