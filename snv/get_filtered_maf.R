@@ -30,7 +30,7 @@ pan_maf_filter.sample %>%
 pan_maf_filter.tbs %>%
   dplyr::inner_join(sample_info.unique,by="sample") %>%
   dplyr::select(-sample)->sample_info.tbs
-readr::write_rds(sample_info.tbs,path="/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.clinical.tsv.rds.gz",compress = "gz")
+readr::write_rds(sample_info.tbs,path="/data/GSCALite/TCGA/snv/01-syn_mutation_syn7824274_mc3_public.pass.clinical.tsv.rds.gz",compress = "gz")
 # give cancer type infomation to maf file ---------------------------------
 
 fun_filter_cancer_type <-function(id){
@@ -47,16 +47,16 @@ fun_filter_cancer_type <-function(id){
 
 
 
-cl <- 32
+cl <- 15
 cluster <- multidplyr::create_cluster(core = cl)
 pan_maf_filter.sample %>%
   multidplyr::partition(cluster = cluster) %>%
   multidplyr::cluster_library("magrittr") %>%
   multidplyr::cluster_assign_value("fun_filter_cancer_type", fun_filter_cancer_type) %>%
   multidplyr::cluster_assign_value("sample_info.unique",sample_info.unique) %>%
-  dplyr::mutate(cancer_types=purrr::map(sample,fun_filter_cancer_type)) %>%
-  dplyr::mutate(cancer_types=unlist(cancer_types)) %>%
-  dplyr::filter(cancer_types!="character(0)") %>%
+  dplyr::mutate(Cancer_Types=purrr::map(sample,fun_filter_cancer_type)) %>%
+  dplyr::mutate(Cancer_Types=unlist(Cancer_Types)) %>%
+  dplyr::filter(Cancer_Types!="character(0)") %>%
   dplyr::collect() %>%
   dplyr::ungroup() %>%
   dplyr::select(-PARTITION_ID) -> pan_maf_filter.cancer
@@ -69,6 +69,4 @@ maftools::read.maf(maf=pan_maf_filter.cancer,clinicalData=sample_info.tbs) ->maf
 
 # output ------------------------------------------------------------------
 
-
-
-readr::write_rds(maf_filter,"/data/GSCALite/TCGA/snv/snv_mutation_mc3_public.pass.filtered_maf.rds.gz",compress="gz")
+readr::write_rds(maf_filter,"/data/GSCALite/TCGA/snv/01-snv_mutation_mc3_public.pass.filtered_maf.rds.gz",compress="gz")
