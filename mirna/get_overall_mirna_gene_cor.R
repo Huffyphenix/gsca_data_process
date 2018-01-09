@@ -72,7 +72,7 @@ fn_get_spm_b <- function(s,data){
                warning =function(e) 2 ,
                error=function(e) 1)->tmp.person
       if(length(tmp.person)!=1){
-        if(tmp.person$p.value<=0.05 && abs(tmp.person$estimate) >= 0.3){
+        if(tmp.person$p.value<=0.05){
           data.frame(mirna=m,cor=tmp.person$estimate) ->tmp.out
           rbind(.out,tmp.out) ->.out
         }
