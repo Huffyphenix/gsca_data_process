@@ -6,7 +6,8 @@ readr::read_rds("/data/TCGA/TCGA_data/sample_info.rds.gz") ->sample_info
 # colnames(sample_info.filter)[1]="Tumor_Sample_Barcode"
 sample_info %>%
   dplyr::select(-barcode) %>%
-  unique() -> sample_info.unique
+  unique() %>%
+  dplyr::rename(Cancer_Types="cancer_types") -> sample_info.unique
 
 
 # maf prepare -------------------------------------------------------------
@@ -38,9 +39,9 @@ fun_filter_cancer_type <-function(id){
   # id<-"z_1"
   sample_info.unique %>%
     dplyr::filter(sample %in% id) %>%
-    dplyr::select(cancer_types) %>%
+    dplyr::select(Cancer_Types) %>%
     unique() %>% 
-    dplyr::pull(cancer_types) %>%
+    dplyr::pull(Cancer_Types) %>%
     as.character() ->a
   return(a)
 }
