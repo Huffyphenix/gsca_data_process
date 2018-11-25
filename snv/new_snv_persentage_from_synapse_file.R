@@ -22,71 +22,145 @@ readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_
 pan_maf_filter %>%
   dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,12)) ->pan_maf_filter.sample
 
+#############################################
 # give cancer type infomation to maf file ---------------------------------
 
-fun_filter_cancer_type <-function(id){
-  # data<-x1
-  # id<-"z_1"
-  sample_info.unique %>%
-    dplyr::filter(sample %in% id) %>%
-    dplyr::select(Cancer_Types) %>%
-    unique() %>% 
-    dplyr::pull(Cancer_Types) %>%
-    as.character() ->a
-  return(a)
-}
-cl <- 15
-cluster <- multidplyr::create_cluster(core = cl)
-pan_maf_filter.sample %>%
-  multidplyr::partition(cluster = cluster) %>%
-  multidplyr::cluster_library("magrittr") %>%
-  multidplyr::cluster_assign_value("fun_filter_cancer_type", fun_filter_cancer_type) %>%
-  multidplyr::cluster_assign_value("sample_info.unique",sample_info.unique) %>%
-  dplyr::mutate(Cancer_Types=purrr::map(sample,fun_filter_cancer_type)) %>%
-  dplyr::mutate(Cancer_Types=unlist(Cancer_Types)) %>%
-  dplyr::filter(Cancer_Types!="character(0)") %>%
-  dplyr::collect() %>%
-  dplyr::ungroup() %>%
-  dplyr::select(-PARTITION_ID) -> pan_maf_filter.cancer
-parallel::stopCluster(cluster)
+# fun_filter_cancer_type <-function(id){
+#   # data<-x1
+#   # id<-"z_1"
+#   sample_info.unique %>%
+#     dplyr::filter(sample %in% id) %>%
+#     dplyr::select(Cancer_Types) %>%
+#     unique() %>% 
+#     dplyr::pull(Cancer_Types) %>%
+#     as.character() ->a
+#   return(a)
+# }
+# cl <- 15
+# cluster <- multidplyr::create_cluster(core = cl)
+# pan_maf_filter.sample %>%
+#   multidplyr::partition(cluster = cluster) %>%
+#   multidplyr::cluster_library("magrittr") %>%
+#   multidplyr::cluster_assign_value("fun_filter_cancer_type", fun_filter_cancer_type) %>%
+#   multidplyr::cluster_assign_value("sample_info.unique",sample_info.unique) %>%
+#   dplyr::mutate(Cancer_Types=purrr::map(sample,fun_filter_cancer_type)) %>%
+#   dplyr::mutate(Cancer_Types=unlist(Cancer_Types)) %>%
+#   dplyr::filter(Cancer_Types!="character(0)") %>%
+#   dplyr::collect() %>%
+#   dplyr::ungroup() %>%
+#   dplyr::select(-PARTITION_ID) -> pan_maf_filter.cancer
+# parallel::stopCluster(cluster)
+# 
+# pan_maf_filter.cancer
+#############################################
 
-pan_maf_filter.cancer
 
+#############################################
 # calculation of the SNV persentage ---------------------------------------
 oncoplot_effective_mutation <- c("Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins")
 
-fn_get_count <- function(mutation_type){
+# fn_get_count <- function(mutation_type){
+#   mutation_type %>% 
+#     dplyr::filter(mutation == "Mut") %>%
+#     dplyr::select(Tumor_Sample_Barcode) %>%
+#     unique() %>% nrow() -> mut_n
+#   mutation_type %>% 
+#     dplyr::filter(mutation == "Nmut") %>%
+#     dplyr::select(Tumor_Sample_Barcode) %>%
+#     unique() %>% nrow() -> nmut_n
+#   data.frame(mut_n = mut_n)
+# }
+
+# pan_maf_filter.cancer %>%
+#   dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample,Cancer_Types) %>%
+#   dplyr::mutate(mutation = ifelse(Variant_Classification %in% oncoplot_effective_mutation, "Mut", "Nmut")) %>%
+#   tidyr::nest(-c(Hugo_Symbol,Cancer_Types)) %>%
+#   dplyr::group_by(Hugo_Symbol,Cancer_Types) %>%
+#   dplyr::mutate(count = purrr::map(data,fn_get_count)) %>%
+#   dplyr::select(-data) %>%
+#   tidyr::unnest() %>%
+#   tidyr::nest(-Cancer_Types) -> pan_maf_filter.cancer.mut_count
+#  
+# readr::read_tsv("/data/shiny-data/GSCALite/TCGA/snv/sample_count_SNV.tsv") %>%
+#   dplyr::rename("Cancer_Types" = "cancer_types") -> cancer_count
+# 
+# pan_maf_filter.cancer.mut_count %>%
+#   dplyr::inner_join(cancer_count,by="Cancer_Types") %>%
+#   tidyr::unnest() %>%
+#   dplyr::mutate(per = mut_n/n) %>%
+#   dplyr::rename("sm_count" = "mut_n", "symbol" = "Hugo_Symbol" , "cancer_types" = "Cancer_Types") %>%
+#   tidyr::nest(-cancer_types,-n) %>%
+#   dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new
+# 
+# gene_list_snv_count.new %>% 
+#   readr::write_rds(path = file.path("/data/shiny-data/GSCALite/TCGA/snv/",".rds_snv_all_gene_snv_count-new.rds.gz"), compress = "gz")
+
+#############################################
+
+
+
+
+#############################################
+# get snv of each samples -------------------------------------------------
+
+fn_get_sample_count <- function(mutation_type){
   mutation_type %>% 
     dplyr::filter(mutation == "Mut") %>%
-    dplyr::select(Tumor_Sample_Barcode) %>%
-    unique() %>% nrow() -> mut_n
+    nrow() -> mut_n
   mutation_type %>% 
     dplyr::filter(mutation == "Nmut") %>%
-    dplyr::select(Tumor_Sample_Barcode) %>%
-    unique() %>% nrow() -> nmut_n
-  data.frame(mut_n = mut_n)
+    nrow() -> nmut_n
+  tibble::tibble(mut_n = mut_n) 
 }
 
-pan_maf_filter.cancer %>%
-  dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample,Cancer_Types) %>%
+pan_maf_filter.sample %>%
+  dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample) %>%
   dplyr::mutate(mutation = ifelse(Variant_Classification %in% oncoplot_effective_mutation, "Mut", "Nmut")) %>%
-  tidyr::nest(-c(Hugo_Symbol,Cancer_Types)) %>%
-  dplyr::group_by(Hugo_Symbol,Cancer_Types) %>%
-  dplyr::mutate(count = purrr::map(data,fn_get_count)) %>%
+  tidyr::nest(-c(Hugo_Symbol,Tumor_Sample_Barcode)) -> pan_maf_filter.sample.forPARTITION
+
+cl <-10 
+cluster <- multidplyr::create_cluster(core=cl)
+pan_maf_filter.sample.forPARTITION %>%
+  multidplyr::partition(cluster = cluster) %>%
+  multidplyr::cluster_library("magrittr") %>%
+  multidplyr::cluster_assign_value("fn_get_sample_count", fn_get_sample_count)  %>%
+  dplyr::group_by(Hugo_Symbol,Tumor_Sample_Barcode) %>%
+  dplyr::mutate(count = purrr::map(data,fn_get_sample_count)) %>%
+  dplyr::collect() %>%
   dplyr::select(-data) %>%
   tidyr::unnest() %>%
-  tidyr::nest(-Cancer_Types) -> pan_maf_filter.cancer.mut_count
- 
-readr::read_tsv("/data/shiny-data/GSCALite/TCGA/snv/sample_count_SNV.tsv") %>%
-  dplyr::rename("Cancer_Types" = "cancer_types") -> cancer_count
+  dplyr::ungroup() %>%
+  dplyr::select(-PARTITION_ID) %>% 
+  dplyr::mutate(sample = substr(Tumor_Sample_Barcode,1,12)) %>%
+  dplyr::rename("symbol" = "Hugo_Symbol") -> pan_maf_filter.sample.mut_count
+parallel::stopCluster(cluster)
 
-pan_maf_filter.cancer.mut_count %>%
-  dplyr::inner_join(cancer_count,by="Cancer_Types") %>%
-  tidyr::unnest() %>%
-  dplyr::mutate(per = mut_n/n) %>%
-  dplyr::rename("sm_count" = "mut_n", "symbol" = "Hugo_Symbol" , "cancer_types" = "Cancer_Types") %>%
-  tidyr::nest(-cancer_types,-n) %>%
-  dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new
 
-gene_list_snv_count.new %>% 
-  readr::write_rds(path = file.path("/data/shiny-data/GSCALite/TCGA/snv/",".rds_snv_all_gene_snv_count-new.rds.gz"), compress = "gz")
+readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/pancan33_snv.rds.gz") -> pancan33_snv
+fn_gather <- function(.x,.y){
+  print(.x)
+  .y %>%
+    tidyr::gather(-symbol,key="sample",value=n_mut_old)
+}
+pancan33_snv %>%
+  dplyr::mutate(gather = purrr::map2(cancer_types,snv,fn_gather)) %>%
+  dplyr::select(-snv) %>%
+  tidyr::unnest() -> pan_maf_filter.sample.mut_count.old
+
+pan_maf_filter.sample.mut_count.old %>%
+  dplyr::left_join(pan_maf_filter.sample.mut_count,by=c("symbol","sample")) %>%
+  dplyr::mutate(mut_n = ifelse(is.na(mut_n),0,mut_n)) %>%
+  dplyr::select(-n_mut_old,-Tumor_Sample_Barcode) -> pan_maf_filter.sample.mut_count.oldnew.combine
+
+fn_spread <- function(.x){
+  .x %>%
+    tidyr::spread(key=sample,value = mut_n)
+}
+pan_maf_filter.sample.mut_count.oldnew.combine %>%
+  tidyr::nest(-cancer_types) %>%
+  dplyr::group_by(cancer_types) %>%
+  dplyr::mutate(data = purrr::map(data,.f=fn_spread)) -> pan_maf_filter.sample.mut_count.oldnew.combine.spread
+
+pan_maf_filter.sample.mut_count.oldnew.combine.spread %>%
+  readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/","pancan33_snv_from_syn7824274.rds.gz"), compress = "gz")
+  
