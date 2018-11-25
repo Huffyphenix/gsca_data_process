@@ -1,5 +1,5 @@
 # gsca_data_process
-give a process for data used in gsca project
+Processing of data used in gsca project
 ## cnv
 1. percantage calculation use threshold data.
 cnv are classified into 4 types, homo amp, homo deletion, hete amp, hete deletion. percentage is calculated.
@@ -11,10 +11,12 @@ fdr is filtered with threshold 0.05.
 ## snv
 1. percentage
 per=mut count/sample count
+mut samples defined by syn7824274, including viaration types:
+"Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins"
 
 2. maf
-filter raw maf data, only some rows are remained.
-cancer type infomation is added as clinical part of maf, and maf part to make cancer type selection available.
+filter raw maf data, only some columns were remained.
+cancer type infomation is added as clinical part of maf, this make cancer type selection available in GSCALite.
 save them as maf object.
 
 3. survival
