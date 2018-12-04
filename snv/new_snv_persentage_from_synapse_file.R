@@ -116,11 +116,11 @@ fn_get_sample_count <- function(mutation_type){
 pan_maf_filter.sample %>%
   dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample) %>%
   dplyr::mutate(mutation = ifelse(Variant_Classification %in% oncoplot_effective_mutation, "Mut", "Nmut")) %>%
-  tidyr::nest(-c(Hugo_Symbol,Tumor_Sample_Barcode)) -> pan_maf_filter.sample.forPARTITION
+  tidyr::nest(-c(Hugo_Symbol,Tumor_Sample_Barcode)) -> pan_maf_filter.sample.for_PARTITION_ID
 
 cl <-10 
 cluster <- multidplyr::create_cluster(core=cl)
-pan_maf_filter.sample.forPARTITION %>%
+pan_maf_filter.sample.for_PARTITION_ID %>%
   multidplyr::partition(cluster = cluster) %>%
   multidplyr::cluster_library("magrittr") %>%
   multidplyr::cluster_assign_value("fn_get_sample_count", fn_get_sample_count)  %>%
@@ -135,32 +135,50 @@ pan_maf_filter.sample.forPARTITION %>%
   dplyr::rename("symbol" = "Hugo_Symbol") -> pan_maf_filter.sample.mut_count
 parallel::stopCluster(cluster)
 
-
-readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/pancan33_snv.rds.gz") -> pancan33_snv
-fn_gather <- function(.x,.y){
-  print(.x)
-  .y %>%
-    tidyr::gather(-symbol,key="sample",value=n_mut_old)
-}
-pancan33_snv %>%
-  dplyr::mutate(gather = purrr::map2(cancer_types,snv,fn_gather)) %>%
-  dplyr::select(-snv) %>%
-  tidyr::unnest() -> pan_maf_filter.sample.mut_count.old
-
-pan_maf_filter.sample.mut_count.old %>%
-  dplyr::left_join(pan_maf_filter.sample.mut_count,by=c("symbol","sample")) %>%
-  dplyr::mutate(mut_n = ifelse(is.na(mut_n),0,mut_n)) %>%
-  dplyr::select(-n_mut_old,-Tumor_Sample_Barcode) -> pan_maf_filter.sample.mut_count.oldnew.combine
-
 fn_spread <- function(.x){
   .x %>%
+    tidyr::spread(key=sample,value = mut_n) %>%
+    tidyr::gather(-symbol,key="sample",value="mut_n") %>%
+    dplyr::mutate(mut_n = ifelse(is.na(mut_n),0,mut_n)) %>%
     tidyr::spread(key=sample,value = mut_n)
 }
-pan_maf_filter.sample.mut_count.oldnew.combine %>%
-  tidyr::nest(-cancer_types) %>%
-  dplyr::group_by(cancer_types) %>%
-  dplyr::mutate(data = purrr::map(data,.f=fn_spread)) -> pan_maf_filter.sample.mut_count.oldnew.combine.spread
 
-pan_maf_filter.sample.mut_count.oldnew.combine.spread %>%
-  readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/","pancan33_snv_from_syn7824274.rds.gz"), compress = "gz")
-  
+pan_maf_filter.sample.mut_count %>%
+  dplyr::left_join(sample_info.unique,by="sample") %>%
+  dplyr::select(-Tumor_Sample_Barcode) %>%
+  tidyr::nest(-Cancer_Types,.key="snv") %>% 
+  dplyr::group_by(Cancer_Types) %>%
+  dplyr::mutate(snv = purrr::map(snv,fn_spread)) %>%
+  readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/","pancan33_snv_from_syn7824274_spread.rds.gz"),compress = "gz")
+
+
+# readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/pancan33_snv.rds.gz") -> pancan33_snv
+# fn_gather <- function(.x,.y){
+#   print(.x)
+#   .y %>%
+#     tidyr::gather(-symbol,key="sample",value=n_mut_old)
+# }
+# pancan33_snv %>%
+#   dplyr::mutate(gather = purrr::map2(cancer_types,snv,fn_gather)) %>%
+#   dplyr::select(-snv) %>%
+#   tidyr::unnest() -> pan_maf_filter.sample.mut_count.old
+# 
+# pan_maf_filter.sample.mut_count.old %>%
+#   dplyr::full_join(pan_maf_filter.sample.mut_count,by=c("symbol","sample")) %>%
+#   dplyr::mutate(mut_n = ifelse(is.na(mut_n),0,mut_n)) %>%
+#   dplyr::select(-n_mut_old,-Tumor_Sample_Barcode) -> pan_maf_filter.sample.mut_count.oldnew.combine
+# 
+# fn_spread <- function(.x){
+#   .x %>%
+#     tidyr::spread(key=sample,value = mut_n)
+# }
+# pan_maf_filter.sample.mut_count.oldnew.combine %>%
+#   tidyr::nest(-cancer_types) %>%
+#   dplyr::group_by(cancer_types) %>%
+#   dplyr::mutate(data = purrr::map(data,.f=fn_spread)) -> pan_maf_filter.sample.mut_count.oldnew.combine.spread
+
+# pan_maf_filter.sample.mut_count.oldnew.combine.spread %>%
+#   readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/","pancan33_snv_from_syn7824274.rds.gz"), compress = "gz")
+#   
+# pan_maf_filter.sample.mut_count.oldnew.combine.spread %>%
+#   readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/","pancan33_snv_from_syn7824274.rds.gz"), compress = "gz")
