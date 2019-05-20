@@ -46,7 +46,8 @@ TCGA_RNAseq_gene_info %>%
   dplyr::mutate(GeneID=as.numeric(GeneID)) %>%
   dplyr::inner_join(ncbi_symbol_info_9606.alias,by="GeneID") %>%
   dplyr::rename("TCGA_sym"="Symbol.x","NCBI_sym"="Symbol.y") %>%
-  dplyr::select(-n) -> gene_info.TCGA.NCBI
+  dplyr::select(-n) %>%
+  dplyr::mutate(TCGA_sym = ifelse(TCGA_sym == "?", NCBI_sym,TCGA_sym))-> gene_info.TCGA.NCBI
 
 gene_info.TCGA.NCBI %>%
-  readr::write_tsv(file.path(basic_path,"data/id_corresponding","id_correspond_between_NCBI_TCGA.tsv"))
+  readr::write_rds(file.path(basic_path,"data/id_corresponding","id_correspond_between_NCBI_TCGA.rds.gz"),compress="gz")
