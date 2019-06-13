@@ -5,12 +5,12 @@ library(magrittr)
 config <- list()
 config$database <- c("/data/TCGA/TCGA_data")
 config$out <- c("/data/GSCALite/")
-
+config$mirna <- c("/home/huff/project/data/GSCALite/TCGA/mirna")
 # load data ---------------------------------------------------------------
 
 mirna_exp<- readr::read_rds(file.path(config$database,"pancan33_mirna_expr.rds.gz"))
 gene_exp <- readr::read_rds(file.path(config$database,"pancan33_expr.rds.gz"))
-mirna2gene <- readr::read_rds(file.path("/data/GSCALite/TCGA/mirna/miRNA2gene.all.nest.rds.gz"))
+mirna2gene <- readr::read_rds(file.path(config$mirna ,"miRNA2gene.all.nest.rds.gz"))
 
 # merge
 fun_barcode <- function(.b){
@@ -56,13 +56,13 @@ fn_get_spm_a <-function(cancer,gene_e) {
     tidyr::nest(-symbol) %>%
     dplyr::group_by(symbol) %>%
     # dplyr::filter(symbol %in% c("ABI2")) %>%
-    dplyr::mutate(spm=purrr::map2(symbol,data,fn_get_spm_b)) %>%
+    dplyr::mutate(spm=purrr::map2(symbol,data,fn_get_spm_b,mirna_ready=mirna_ready)) %>%
     dplyr::select(-data) %>%
     tidyr::unnest() %>%
   dplyr::ungroup()  -> .out
 return(.out)
 }
-fn_get_spm_b <- function(s,data){
+fn_get_spm_b <- function(s,data,mirna_ready){
   .out<-data.frame(mirna="test") 
   # print(s)
   mirna2gene %>%
@@ -117,3 +117,4 @@ pan33_gene_cor_mirna %>%
   readr::write_rds(file.path(config$out,"TCGA","mirna","pan33_gene_cor_with_mirna.rds.gz"),compress="gz")
 
  # save.image(file = "/project/huff/huff/github/gsca_data_process/mirna/.RData")
+
