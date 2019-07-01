@@ -1,10 +1,12 @@
 library("magrittr")
 
 # sample info prepare -----------------------------------------------------
-readr::read_rds("/data/TCGA/TCGA_data/sample_info.rds.gz") ->sample_info
+readr::read_rds("/home/huff/project/data/TCGA/sample_info.rds.gz") ->sample_info #.1
+readr::read_rds("/data/TCGA/TCGA_data/sample_info.rds.gz") ->sample_info #.3
 # sample_info %>% dplyr::select(-barcode) ->sample_info.filter
 # colnames(sample_info.filter)[1]="Tumor_Sample_Barcode"
 sample_info %>%
+  dplyr::mutate(sample = substr(barcode,1,15)) %>%
   dplyr::select(-barcode) %>%
   unique() %>%
   dplyr::rename(Cancer_Types="cancer_types") -> sample_info.unique
@@ -17,10 +19,10 @@ sample_info %>%
 #                           Variant_Type,Reference_Allele,Tumor_Seq_Allele1,
 #                           Tumor_Seq_Allele2,Tumor_Sample_Barcode) ->pan_maf_filter
 # readr::write_rds(pan_maf_filter,path="/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz",compress = "gz")
-readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
-
+# readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
+readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
 pan_maf_filter %>%
-  dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,12)) ->pan_maf_filter.sample
+  dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,15)) ->pan_maf_filter.sample
 
 #############################################
 # give cancer type infomation to maf file ---------------------------------
