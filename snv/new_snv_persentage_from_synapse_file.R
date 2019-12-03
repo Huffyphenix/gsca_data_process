@@ -121,7 +121,7 @@ pan_maf_filter.sample %>%
   tidyr::nest(-c(Hugo_Symbol,Tumor_Sample_Barcode)) -> pan_maf_filter.sample.for_PARTITION_ID
 
 cl <-10 
-cluster <- multidplyr::create_cluster(core=cl)
+cluster <- multidplyr::new_cluster(cl)
 pan_maf_filter.sample.for_PARTITION_ID %>%
   multidplyr::partition(cluster = cluster) %>%
   multidplyr::cluster_library("magrittr") %>%
