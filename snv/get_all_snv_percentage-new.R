@@ -2,7 +2,8 @@ library("magrittr")
 
 # sample info prepare -----------------------------------------------------
 readr::read_rds("/home/huff/project/data/TCGA/sample_info.rds.gz") ->sample_info #.1
-readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
+# readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter # Filter=="PASS", a wrong filtering
+readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.maf.filter.rds.gz") ->pan_maf_filter # not filter by  Filter=="PASS"
 pan_maf_filter %>%
   dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,15)) ->pan_maf_filter.sample
 
