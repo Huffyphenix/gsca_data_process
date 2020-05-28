@@ -20,7 +20,8 @@ sample_info %>%
 #                           Tumor_Seq_Allele2,Tumor_Sample_Barcode) ->pan_maf_filter
 # readr::write_rds(pan_maf_filter,path="/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz",compress = "gz")
 # readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
-readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
+# readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter.
+readr::read_rds("/project/huff/huff/data/TCGA/snv/syn_mutation_syn7824274_mc3_public.maf.filter.rds.gz") ->pan_maf_filter
 pan_maf_filter %>%
   dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,15)) ->pan_maf_filter.sample
 
@@ -57,45 +58,69 @@ pan_maf_filter %>%
 #############################################
 
 
+pan_maf_filter.sample %>%
+  dplyr::left_join(sample_info.unique, by="sample")  -> pan_maf_filter.cancer
 #############################################
 # calculation of the SNV persentage ---------------------------------------
 oncoplot_effective_mutation <- c("Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins")
+excluded_mut_type <- c("Silent", "Intron", "IGR", "3'UTR", "5'UTR", "3'Flank", "5'Flank") # https://docs.cbioportal.org/5.1-data-loading/data-loading/file-formats
 
-# fn_get_count <- function(mutation_type){
-#   mutation_type %>% 
-#     dplyr::filter(mutation == "Mut") %>%
-#     dplyr::select(Tumor_Sample_Barcode) %>%
-#     unique() %>% nrow() -> mut_n
-#   mutation_type %>% 
-#     dplyr::filter(mutation == "Nmut") %>%
-#     dplyr::select(Tumor_Sample_Barcode) %>%
-#     unique() %>% nrow() -> nmut_n
-#   data.frame(mut_n = mut_n)
-# }
+fn_get_count <- function(mutation_type){
+  mutation_type %>%
+    dplyr::filter(mutation == "Mut") %>%
+    dplyr::select(Tumor_Sample_Barcode) %>%
+    unique() %>% nrow() -> mut_n
+  mutation_type %>%
+    dplyr::filter(mutation == "Nmut") %>%
+    dplyr::select(Tumor_Sample_Barcode) %>%
+    unique() %>% nrow() -> nmut_n
+  data.frame(mut_n = mut_n, nmut_n = nmut_n)
+}
 
-# pan_maf_filter.cancer %>%
-#   dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample,Cancer_Types) %>%
-#   dplyr::mutate(mutation = ifelse(Variant_Classification %in% oncoplot_effective_mutation, "Mut", "Nmut")) %>%
-#   tidyr::nest(-c(Hugo_Symbol,Cancer_Types)) %>%
-#   dplyr::group_by(Hugo_Symbol,Cancer_Types) %>%
-#   dplyr::mutate(count = purrr::map(data,fn_get_count)) %>%
-#   dplyr::select(-data) %>%
-#   tidyr::unnest() %>%
-#   tidyr::nest(-Cancer_Types) -> pan_maf_filter.cancer.mut_count
+pan_maf_filter.cancer %>%
+  dplyr::select(Hugo_Symbol,Variant_Classification,Variant_Type,Tumor_Sample_Barcode ,sample,Cancer_Types) %>%
+  dplyr::mutate(mutation = ifelse(!Variant_Classification %in% excluded_mut_type, "Mut", "Nmut")) %>%
+  tidyr::nest(-c(Hugo_Symbol,Cancer_Types)) %>%
+  dplyr::group_by(Hugo_Symbol,Cancer_Types) %>%
+  dplyr::mutate(count = purrr::map(data,fn_get_count)) %>%
+  dplyr::select(-data) %>%
+  tidyr::unnest() %>%
+  tidyr::nest(-Cancer_Types) -> pan_maf_filter.cancer.mut_count
 #  
 # readr::read_tsv("/data/shiny-data/GSCALite/TCGA/snv/sample_count_SNV.tsv") %>%
 #   dplyr::rename("Cancer_Types" = "cancer_types") -> cancer_count
 # 
-# pan_maf_filter.cancer.mut_count %>%
-#   dplyr::inner_join(cancer_count,by="Cancer_Types") %>%
-#   tidyr::unnest() %>%
-#   dplyr::mutate(per = mut_n/n) %>%
-#   dplyr::rename("sm_count" = "mut_n", "symbol" = "Hugo_Symbol" , "cancer_types" = "Cancer_Types") %>%
-#   tidyr::nest(-cancer_types,-n) %>%
-#   dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new
+pan_maf_filter.cancer %>%
+  dplyr::select(Cancer_Types,Tumor_Sample_Barcode) %>%
+  unique() %>%
+  .$Cancer_Types %>%
+  table() %>%
+  t() %>%
+  as.data.frame() %>%
+  dplyr::as.tbl() %>%
+  dplyr::select(-Var1) %>%
+  dplyr::rename("cancer_types" = ".", "n" = "Freq")%>%
+  dplyr::rename("Cancer_Types"="cancer_types") -> cancer_count
+
+pan_maf_filter.cancer.mut_count %>%
+  dplyr::inner_join(cancer_count,by="Cancer_Types") %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(per = mut_n/n) %>%
+  dplyr::rename("sm_count" = "mut_n", "symbol" = "Hugo_Symbol" , "cancer_types" = "Cancer_Types") %>%
+  tidyr::nest(-cancer_types,-n) %>%
+  dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new
 # 
 # gene_list_snv_count.new %>% 
 #   readr::write_rds(path = file.path("/data/shiny-data/GSCALite/TCGA/snv/",".rds_snv_all_gene_snv_count-new.rds.gz"), compress = "gz")
+
+gene_list_snv_count.new %>%
+  tidyr::unnest() %>%
+  dplyr::mutate(per = sm_count/n) %>%
+  tidyr::nest(-cancer_types,-n) %>%
+  dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new.new
+
+gene_list_snv_count.new.new %>%
+  readr::write_rds(file.path("/home/huff/project/data/TCGA/snv/gene_list_snv_count.new.new200215.rds.gz"),compress = "gz")
 
 #############################################
 
