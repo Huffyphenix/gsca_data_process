@@ -10,11 +10,11 @@ gsca_v2_path <- "/home/huff/data/GSCA"
 # read ncbi id  -----------------------------------------------------------
 
 Homo_sapiens.gene_info.simplify <- readr::read_tsv(file.path("/home/huff/data/gene_info/homo_sapines/NCBI/Homo_sapiens.gene_info.simplify")) %>%
-  dplyr::mutate(GeneID=as.character(GeneID))
+  dplyr::mutate(entrez_id=as.character(GeneID)) %>%
+  dplyr::select(-GeneID)
 
 Homo_sapiens.gene_info.simplify %>%
-  dplyr::select(GeneID,Symbol) %>%
-  dplyr::rename("entrez_id"="GeneID") -> Homo_sapiens.gene_info.simplify.symbolId
+  dplyr::select(entrez_id,Symbol) -> Homo_sapiens.gene_info.simplify.symbolId
 
 # read tcga expression file -----------------------------------------------
 
@@ -49,7 +49,8 @@ NCBI_id_in_TCGA %>%
   dplyr::select(entrez=entrez_id,symbol=NCBI_sym,description,biotype=type_of_gene,ensembl=Ensembl,searchname=searchname_ncbi) %>%
   readr::write_rds(file.path(gsca_v2_path,"/NCBI_id_in_TCGA-final.rds.gz"),compress = "gz")
 
-
+NCBI_id_in_TCGA %>%
+  readr::write_tsv(file.path(gsca_v2_path,"NCBI_id_in.with_TCGAsym.rds.gz"))
 # read TCGA DE file ----------------------------------------------------------------
 
 pancan14_expr_fc_pval.rds.gz <- readr::read_rds(file.path(gscalite_path,"TCGA/expr/pancan14_expr_fc_pval.rds.gz"))
