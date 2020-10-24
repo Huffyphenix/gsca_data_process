@@ -2,7 +2,11 @@ library("magrittr")
 
 # sample info prepare -----------------------------------------------------
 readr::read_rds("/home/huff/project/data/TCGA/sample_info.rds.gz") ->sample_info #.1
+readr::read_rds("/data/TCGA/TCGA_data/sample_info.rds.gz") ->sample_info #.3
+
 readr::read_rds("/home/huff/project/data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter
+readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz") ->pan_maf_filter #.3
+
 pan_maf_filter %>%
   dplyr::mutate(sample=substr(Tumor_Sample_Barcode,1,15)) ->pan_maf_filter.sample
 
@@ -30,7 +34,7 @@ pan_maf_filter.cancer %>%
   dplyr::rename("cancer_types" = ".", "n" = "Freq") -> cancer_count
 
 
-gene_list_snv_count.new <- readr::read_rds("/home/huff/project/data/TCGA/snv/.rds_snv_all_gene_snv_count-new.rds.gz")
+gene_list_snv_count.new <- readr::read_rds("/data/shiny-data/GSCALite/TCGA/snv/.rds_snv_all_gene_snv_count-new.rds.gz")
 
 pan_maf_filter.cancer.mut_count %>%
   dplyr::inner_join(cancer_count,by="Cancer_Types") %>%
@@ -49,4 +53,4 @@ gene_list_snv_count.new %>%
   dplyr::rename("mut_count" = "data") -> gene_list_snv_count.new.new
 
 gene_list_snv_count.new.new %>%
-  readr::write_rds(file.path("/home/huff/project/data/TCGA/snv/gene_list_snv_count.new.new.rds.gz"),compress = "gz")
+  readr::write_rds(file.path("/data/shiny-data/GSCALite/TCGA/snv/gene_list_snv_count.new.new.rds.gz"),compress = "gz")
