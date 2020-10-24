@@ -2,3 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+immune/rda
+immune/*.Rout
+cnv_new/*.Rout
+cnv_new/rda
