@@ -50,27 +50,26 @@ pancan34_cnv_threshold.rds.gz %>%
   })) %>%
   dplyr::select(-cnv) %>%
   dplyr::rename("cnv"="cnv_trans") -> pancan34_cnv_threshold.rds.gz.IdTrans
-
+s
 pancan34_cnv_threshold.rds.gz.IdTrans  %>% readr::write_rds(file.path(gsca_v2_path,"cnv","pancan34_cnv_threshold.IdTrans.rds.gz"))
 
 # read cnv percentage -----------------------------------------------------
 
+pancan34_cnv_percent.rds.gz <- readr::read_rds(file.path(gscalite_path,"cnv","pancan34_cnv_percent.rds.gz"))
+
+# translate cnv percentage -----------------------------------------------------
+
+pancan34_cnv_percent.rds.gz %>%
+  dplyr::mutate(cnv_trans = purrr::map(cnv,.f=function(.x){
+    cnv_symbol_entrez %>%
+      dplyr::inner_join(.x %>% dplyr::rename("cnvsymbol"="symbol"),by="cnvsymbol") %>%
+      dplyr::select(-cnvsymbol)
+  })) %>%
+  dplyr::select(-cnv) %>%
+  dplyr::rename("cnv"="cnv_trans") -> pancan34_cnv_percent.rds.gz.IdTrans
+
+pancan34_cnv_percent.rds.gz.IdTrans  %>% readr::write_rds(file.path(gsca_v2_path,"cnv","pancan34_cnv_percent.IdTrans.rds.gz"))
+
 # read cnv gene correlation -----------------------------------------------
-
-
-# translate SNV -----------------------------------------------------------
-
-
-# read SNV ---------------------------------------------------------------------
-
-pancan33_snv.rds.gz <- readr::read_rds(file.path(gscalite_path,"snv","pancan33_snv.rds.gz"))
-
-
-
-# read maf ----------------------------------------------------------------
-
-syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz <- readr::read_rds(file.path(gscalite_path,"snv","syn_mutation_syn7824274_mc3_public.pass.simplification.maf.rds.gz"))
-
-syn_mutation_syn7824274_mc3_public.pass.maf.rds.gz <- readr::read_rds(file.path(gscalite_path,"snv","syn_mutation_syn7824274_mc3_public.pass.maf.rds.gz"))
-
+# need a new correlation results
 
