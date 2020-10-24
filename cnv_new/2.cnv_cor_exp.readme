@@ -1,0 +1,5 @@
+# README of correlation calculation
+## changes compared with GSCALite
+1. use spearman instead of pearson correlation.
+2. output all gene results instead of significant results.
+
