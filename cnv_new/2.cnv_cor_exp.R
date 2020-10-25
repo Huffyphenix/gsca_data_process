@@ -128,7 +128,7 @@ fn_get_cor<-function(data,cancer){
     dplyr::mutate(spm=estimate) %>%
     dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
     dplyr::mutate(logfdr=-log10(fdr)) %>%
-    dplyr::mutate(logfdr=ifelse(fdr>50,50,fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr)) %>%
     dplyr::select(symbol,spm,fdr,logfdr) ->.out
   return(.out)
 }
