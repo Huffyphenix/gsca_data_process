@@ -33,7 +33,7 @@ pancan34_cnv.rds.gz %>%
   dplyr::select(-cnv) %>%
   dplyr::rename("cnv"="cnv_trans") -> pancan34_cnv.rds.gz.IdTrans
 
-pancan34_cnv.rds.gz.IdTrans %>% readr::write_rds(file.path(gsca_v2_path,"cnv","pancan34_expr.IdTrans.rds.gz"))
+pancan34_cnv.rds.gz.IdTrans %>% readr::write_rds(file.path(gsca_v2_path,"cnv","pancan34_cnv.IdTrans.rds.gz"))
 
 
 # read cnv threshold ------------------------------------------------------
