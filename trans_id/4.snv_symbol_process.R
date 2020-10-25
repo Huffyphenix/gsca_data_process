@@ -6,7 +6,7 @@
 library(magrittr)
 
 # Load data ---------------------------------------------------------------
-rda_path <- "/home/huff/github/gsca_data_process/trans_id/rda/"
+rda_path <- "/home/huff/github/gsca_data_process/trans_id/rda"
 gscalite_path <- "/home/huff/data/GSCALite/TCGA"
 gsca_v2_path <- "/home/huff/data/GSCA"
 
@@ -68,16 +68,17 @@ snv_symbol_NOT_in_search_symbol_IN_ncbi_filter %>%
   snv_symbol_NOT_in_search_symbol_IN_ncbi_filter_retain # 1674
 
 snv_symbol_in_search_symbol %>% 
-  tibble::add_column('snvsymbol' = snv_symbol_in_search_symbol$symbol, .before = 1) %>% 
+  tibble::add_column('snv_symbol' = snv_symbol_in_search_symbol$symbol, .before = 1) %>% 
   dplyr::bind_rows(snv_symbol_NOT_in_search_symbol_IN_ncbi_filter_retain) %>% 
   dplyr::distinct(entrez, symbol, .keep_all = T) ->
   snv_symbol_search_symbol_final
 
 snv_symbol_search_symbol_final %>%
-  readr::write_rds(file = 'trans_id/rda/snv_symbol_search_symbol_final.rds.gz', compress = 'gz')
+  readr::write_rds(file = file.path(rda_path,'snv_symbol_search_symbol_final.rds.gz'), compress = 'gz')
 snv_symbol_search_symbol_final %>%
   readr::write_rds(file = '/home/huff/github/GSCA/data/rda/snv_symbol_search_symbol_final.rds.gz', compress = 'gz')
 # save image --------------------------------------------------------------
 
 
 save.image(file.path(rda_path,"4.snv_symbol_process.rda"))
+# load(file.path(rda_path,"4.snv_symbol_process.rda"))
