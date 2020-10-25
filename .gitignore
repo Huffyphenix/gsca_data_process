@@ -4,5 +4,7 @@
 .Ruserdata
 immune/rda
 immune/*.Rout
-cnv_new/*.Rout
+cnv_new/*out
 cnv_new/rda
+trans_id/rda
+
