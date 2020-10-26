@@ -1,7 +1,7 @@
 
 # Immune cell correlation with gene cnv ----------------------------
 # Author: Huffy
-# Date: 2020-10-22
+# Date: 2020-10-25
 
 library(magrittr)
 # path --------------------------------------------------------------------
@@ -40,7 +40,11 @@ fn_correlation <- function(.immune,.cnv,.cancers){
     tidyr::nest(-symbol,-cell_type,-entrez) %>%
     dplyr::mutate(cor = purrr::map(data,.f=fn_spm)) %>%
     dplyr::select(-data) %>%
-    tidyr::unnest(cor)
+    tidyr::unnest(cor) %>%
+    dplyr::mutate(cor=estimate) %>%
+    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
+    dplyr::mutate(logfdr=-log10(fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr))
 }
 
 fn_spm <- function(.data){
@@ -49,7 +53,7 @@ fn_spm <- function(.data){
 
 
 # Get the results ---------------------------------------------------------
-cluster <- multidplyr::new_cluster(10)
+cluster <- multidplyr::new_cluster(33)
 
 multidplyr::cluster_library(cluster,"magrittr")
 multidplyr::cluster_assign(cluster, fn_correlation=fn_correlation)
