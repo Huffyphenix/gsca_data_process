@@ -71,7 +71,7 @@ combine_data %>%
 # result output -----------------------------------------------------------
 
 immune_cnv_correlation %>%
-  readr::write_rds(file.path(data_path,"TIL","pan33_ImmuneCellAI_cor_geneExp.rds.gz"))
+  readr::write_rds(file.path(data_path,"TIL","pan33_ImmuneCellAI_cor_geneCNV.rds.gz"))
 
 save.image(file = file.path(git_path,"rda","3.cnv_immune_cor.rda"))
 
