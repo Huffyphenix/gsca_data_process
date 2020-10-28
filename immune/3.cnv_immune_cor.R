@@ -36,24 +36,39 @@ fn_correlation <- function(.immune,.cnv,.cancers){
   .combine <- .immune %>%
     dplyr::inner_join(.cnv,by="barcode")
   
-  .combine %>%
+  .combine %>% 
     tidyr::nest(-symbol,-cell_type,-entrez) %>%
     dplyr::mutate(cor = purrr::map(data,.f=fn_spm)) %>%
     dplyr::select(-data) %>%
-    tidyr::unnest(cor) %>%
-    dplyr::mutate(cor=estimate) %>%
-    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
-    dplyr::mutate(logfdr=-log10(fdr)) %>%
-    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr))
+    tidyr::unnest(cor) 
 }
 
 fn_spm <- function(.data){
-  broom::tidy(cor.test(.data$TIL,.data$cnv,method="kendall"))
+  broom::tidy(cor.test(.data$TIL,.data$cnv,method="kendall")) %>%
+    dplyr::mutate(cor=estimate) %>%
+    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
+    dplyr::mutate(logfdr=-log10(fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr)) -> kendall
+  
+  broom::tidy(cor.test(.data$TIL,.data$cnv,method="pearson")) %>%
+    dplyr::mutate(cor=estimate) %>%
+    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
+    dplyr::mutate(logfdr=-log10(fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr)) %>%
+    dplyr::select(-parameter,-conf.low,-conf.high)-> pearson
+  
+  broom::tidy(cor.test(.data$TIL,.data$cnv,method="spearman")) %>%
+    dplyr::mutate(cor=estimate) %>%
+    dplyr::mutate(fdr= p.adjust(p.value, method = "fdr")) %>%
+    dplyr::mutate(logfdr=-log10(fdr)) %>%
+    dplyr::mutate(logfdr=ifelse(logfdr>50,50,logfdr)) -> spearman
+  rbind(pearson,kendall) %>%
+    rbind(spearman)
 }
 
 
 # Get the results ---------------------------------------------------------
-cluster <- multidplyr::new_cluster(33)
+cluster <- multidplyr::new_cluster(20)
 
 multidplyr::cluster_library(cluster,"magrittr")
 multidplyr::cluster_assign(cluster, fn_correlation=fn_correlation)
