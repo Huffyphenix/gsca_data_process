@@ -43,5 +43,5 @@ pan32_gene_AIN_sig_pval_class.siplification.rds.gz %>%
       dplyr::select(entrez,symbol,everything())
   })) -> pan32_gene_AIN_sig_pval_class.siplification.rds.gz.IdTrans
 
-pan32_gene_AIN_sig_pval_class.siplification.rds.gz %>%
+pan32_gene_AIN_sig_pval_class.siplification.rds.gz.IdTrans %>%
   readr::write_rds(file.path(gsca_v2_path,"rppa","pan32_gene_AIN_sig_pval_class.siplification.IdTrans.rds.gz"))
