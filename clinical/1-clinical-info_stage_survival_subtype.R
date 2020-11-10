@@ -92,7 +92,8 @@ subtype_info <- readr::read_rds(file.path(data_path,"clinical","pancan34_clinica
 subtype_info %>%
   dplyr::mutate(subtype=purrr::map(subtype,.f=function(.x){
     .x %>%
-      dplyr::select(barcode,subtype)
+      dplyr::select(barcode,subtype) %>%
+      dplyr::mutate(subtype=as.character(subtype))
   })) -> subtype_info
 
 # combine -----------------------------------------------------------------
@@ -105,3 +106,4 @@ clinical_stage_survival_subtype %>%
   readr::write_rds(file.path(gsca_path,"clinical","pancan34_clinical_stage_survival_subtype.rds.gz"),compress = "gz")
 
 save.image(file.path("/home/huff/github/gsca_data_process/clinical/rda/1-clinical-info_stage_survival_subtype.rda"))
+load(file.path("/home/huff/github/gsca_data_process/clinical/rda/1-clinical-info_stage_survival_subtype.rda"))
