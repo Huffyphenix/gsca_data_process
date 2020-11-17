@@ -3,4 +3,10 @@
 .RData
 .Ruserdata
 immune/rda
-immune/*.Rout
+immune/*out
+cnv_new/*out
+cnv_new/rda
+trans_id/rda
+trans_id/*out
+clinical/rda
+expr/*Rout

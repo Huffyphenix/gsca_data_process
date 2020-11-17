@@ -4,7 +4,7 @@
 
 # GSCALite path -----------------------------------------------------------
 
-gscalite_path <- "/home/liucj/shiny-data/GSCALite"
+gscalite_path <- "/home/huff/data/GSCALite"
 gsca_v2_path <- "/home/huff/data/GSCA"
 
 # read ncbi id  -----------------------------------------------------------

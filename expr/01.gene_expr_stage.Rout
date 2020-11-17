@@ -1,0 +1,47 @@
+nohup: ignoring input and appending output to 'nohup.out'
+Bioconductor version 3.11 (BiocManager 1.30.10), ?BiocManager::install for help
+Bioconductor version '3.11' is out-of-date; the current release version '3.12'
+  is available with R version '4.0'; see https://bioconductor.org/install
+Error: Problem with `mutate()` input `res`.
+[31mx[39m Problem with `mutate()` input `l`.
+[31mx[39m could not find function "n"
+[34mℹ[39m Input `l` is `n() > 5`.
+[34mℹ[39m The error occurred in group 1: symbol = "A1BG", entrez = "1", stage = "Stage I".
+[34mℹ[39m Input `res` is `purrr::pmap(list(cancer_types, expr, stage, n), .f = fn_test)`.
+[34mℹ[39m The error occurred in group 1: symbol = "A1BG", entrez = "1", stage = "Stage I".
+Backtrace:
+[90m     [39m█
+[90m  1. [39m├─`%>%`(...)
+[90m  2. [39m│ ├─base::withVisible(eval(quote(`_fseq`(`_lhs`)), env, env))
+[90m  3. [39m│ └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+[90m  4. [39m│   └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+[90m  5. [39m│     └─`_fseq`(`_lhs`)
+[90m  6. [39m│       └─magrittr::freduce(value, `_function_list`)
+[90m  7. [39m│         └─function_list[[i]](value)
+[90m  8. [39m│           ├─dplyr::mutate(...)
+[90m  9. [39m│           └─dplyr:::mutate.data.frame(...)
+[90m 10. [39m│             └─dplyr:::mutate_cols(.data, ...)
+[90m 11. [39m│               ├─base::withCallingHandlers(...)
+[90m 12. [39m│               └─mask$eval_all_mutate(dots[[i]])
+[90m 13. [39m├─purrr::pmap(list(cancer_types, expr, stage, n), .f = fn_test)
+[90m 14. [39m│ └─global::.f(...)
+[90m 15. [39m│   └─`%>%`(...)
+[90m 16. [39m│     ├─base::withVisible(eval(quote(`_fseq`(`_lhs`)), env, env))
+[90m 17. [39m│     └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+[90m 18. [39m│       └─base::eval(quote(`_fseq`(`_lhs`)), env, env)
+[90m 19. [39m│         └─`_fseq`(`_lhs`)
+[90m 20. [39m│           └─magrittr::freduce(value, `_function_list`)
+[90m 21. [39m│             ├─base::withVisible(function_list[[k]](value))
+[90m 22. [39m│             └─function_list[[k]](value)
+[90m 23. [39m│               ├─dplyr::mutate(., l = n() > 5)
+[90m 24. [39m│               └─dplyr:::mutate.data.frame(., l = n() > 5)
+[90m 25. [39m│                 └─dplyr:::mutate_cols(.data, ...)
+[90m 26. [39m│                   ├─base::withCallingHandlers(...)
+[90m 27. [39m│                   └─mask$eval_all_mutate(dots[[i]])
+[90m 28. [39m├─base::.handleSimpleError(...)
+[90m 29. [39m│ └─dplyr:::h(simpleError(msg, call))
+[90m 30. [39m│   └─rlang::abort(...)
+[90m 31. [39m│     └─rlang:::signal_abort(cnd)
+[90m 32. [39m│       └─base::signalCondition(cnd)
+[90m 33. [39m└─(function (e) ...
+Execution halted
