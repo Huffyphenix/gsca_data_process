@@ -72,7 +72,7 @@ fn_oneway <- function(.x) {
     tidyr::spread(key="stage",value="mean.n") -> .mean
   .res %>%
     dplyr::select(method,pval=p.value) %>%
-    dplyr::mutate(fdr=p.adjust(pval, method = "fdr")) %>%
+    # dplyr::mutate(fdr=p.adjust(pval, method = "fdr")) %>%
     cbind(.mean) 
 }
 fn_test <- function(.cancer_types,.expr,.stage,n) {
@@ -101,7 +101,9 @@ fn_test <- function(.cancer_types,.expr,.stage,n) {
       tidyr::nest(data = c(barcode, stage, expr, l)) %>% 
       dplyr::mutate(test = purrr::map(data,.f=fn_oneway)) %>%
       dplyr::select(-data) %>%
-      tidyr::unnest(cols=c(test))
+      tidyr::unnest(cols=c(test)) -> .tmp
+      .tmp %>%
+        dplyr::mutate(fdr=p.adjust(.tmp$pval, method = "fdr"))
   }
 }
 
