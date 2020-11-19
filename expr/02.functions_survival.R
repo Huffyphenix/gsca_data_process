@@ -2,6 +2,8 @@ library(magrittr)
 library(survival)
 library(dplyr)
 
+
+res_path <- file.path("/home/huff/data/GSCA","expr")
 # transform samples barcode -----------------------------------------------
 
 fn_transform_samples <- function(.x) {
@@ -30,24 +32,45 @@ fn_expr_group <- function(.data,.cutoff){
 
 fn_cox_logp <- function(.d){
   .d %>%
+    dplyr::filter(!is.na(group)) %>%
+    dplyr::filter(!is.na(time)) %>%
+    dplyr::filter(!is.na(status)) %>%
     dplyr::group_by(group) %>%
-    dplyr::mutate(n=n()) %>%
+    dplyr::mutate(n=dplyr::n()) %>%
     dplyr::select(group,n) %>%
     dplyr::ungroup() %>%
     dplyr::filter(n>5) %>%
     .$group %>% unique() %>% length() -> len_group
   if(len_group==2){
-    .d_diff <- survival::survdiff(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)
-    kmp <- 1 - pchisq(.d_diff$chisq, df = length(levels(as.factor(.d$group))) - 1)
-    coxp_categorical <- broom::tidy(survival::coxph(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude))$p.value
+    kmp <- tryCatch(
+      1 - pchisq(survival::survdiff(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)$chisq, df = len_group - 1),
+      error = function(e) {1}
+    )
+    
+    cox_categorical <- tryCatch(
+      broom::tidy(survival::coxph(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)),
+      error = function(e) {1}
+    )
+    coxp_categorical <- cox_categorical$p.value
+    hr_categorical <- cox_categorical$estimate
+    
+    cox_continus <- tryCatch(
+    broom::tidy(survival::coxph(survival::Surv(time, status) ~ expr, data = .d, na.action = na.exclude)),
+    error = function(e) {1}
+    )
+    coxp_continus <- cox_continus$p.value
+    hr_continus <- cox_continus$estimate
+    
+   if(hr_categorical>1){
+     higher_risk_of_death <- "Lower expr."
+   }else{ higher_risk_of_death <- "Higher expr."}
+    
   } else {
-    kmp <- NA
-    coxp_categorical <- NA
+    kmp<-1
+    coxp_categorical<-1
+    coxp_continus<-1
   }
-  
-  coxp_continus <- broom::tidy(survival::coxph(survival::Surv(time, status) ~ expr, data = .d, na.action = na.exclude))$p.value
-
-  tibble::tibble(logrankp=kmp,coxp_categorical=coxp_categorical,coxp_continus=coxp_continus)
+  tibble::tibble(logrankp=kmp,coxp_categorical=coxp_categorical,hr_categorical=hr_categorical,coxp_continus=coxp_continus,hr_continus=hr_continus)
 }
 
 fn_survival <- function(.data,.cutoff,sur_type){
@@ -62,8 +85,11 @@ fn_survival <- function(.data,.cutoff,sur_type){
     fn_cox_logp()
 }
 
-fn_survival_res <- function(.cancer_types,.survival,.expr){
-  print(.cancer_types)
+fn_survival_res <- function(.cancer_types,.expr,.symbol,.survival){
+  print(paste(.cancer_types,.symbol))
+  .survival %>%
+    dplyr::filter(cancer_types == .cancer_types) %>%
+    tidyr::unnest() ->.survival
   if (length(grep("pfs",colnames(.survival)))>0) {
     .survival %>%
       dplyr::rename("sample_name"="barcode") %>%
@@ -95,94 +121,33 @@ fn_survival_res <- function(.cancer_types,.survival,.expr){
       tidyr::unnest() -> .survival
   }
   
-  .expr %>%
-    dplyr::filter(symbol %in% gene_symbol$symbol) %>% 
-    dplyr::rename(entrez = entrez_id) %>% 
-    dplyr::mutate(entrez = as.numeric(entrez)) %>% 
-    dplyr::group_by(entrez, symbol) %>% 
-    tidyr::nest() -> .expr
+
+  fn_transform_samples(.expr) -> .expr 
   
   .expr %>%
-    dplyr::mutate(data = purrr::map(data,.f=fn_transform_samples)) -> .expr 
-  
-  .expr %>%
-    dplyr::mutate(data=purrr::map(data,.f=function(.x){
-      .x %>%
         dplyr::filter(type=="tumor") %>%
         dplyr::filter(!is.na(expr)) %>%
-        dplyr::inner_join(.survival,by="sample_name")
-    })) -> .combine
+        dplyr::inner_join(.survival,by="sample_name") -> .combine
+  
   # os survival ----
+  
   .combine %>%
-    dplyr::mutate(cutoff=0.5,sur_type="os") %>%
-    dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-    dplyr::select(-data) %>%
-    dplyr::ungroup() %>%
-    tidyr::unnest(survival_res)-> os_median
-  .combine %>%
-    dplyr::mutate(cutoff=0.75,sur_type="os") %>%
-    dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-    dplyr::select(-data) %>%
-    dplyr::ungroup() %>%
-    tidyr::unnest(survival_res) -> os_upquantile
-  .combine %>%
-    dplyr::mutate(cutoff=0.25,sur_type="os") %>%
-    dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-    dplyr::select(-data) %>%
-    dplyr::ungroup() %>%
-    tidyr::unnest(survival_res) -> os_lowquantile
+    fn_survival(.cutoff=0.5,sur_type="os") %>%
+    dplyr::mutate(cutoff=0.5,sur_type="os") -> os_median
+  
   # pfs survival -----
   if (length(grep("pfs",colnames(.survival)))>0) {
     .combine %>%
-      dplyr::mutate(cutoff=0.5,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res) -> pfs_median
-    .combine %>%
-      dplyr::mutate(cutoff=0.75,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res) -> pfs_upquantile
-    .combine %>%
-      dplyr::mutate(cutoff=0.25,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::pmap(list(data,cutoff,sur_type),fn_survival)) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res) -> pfs_lowquantile
+      fn_survival(.cutoff=0.5,sur_type="pfs") %>%
+      dplyr::mutate(cutoff=0.5,sur_type="pfs") -> pfs_median
+    
   } else {
-    .combine %>%
-      dplyr::mutate(cutoff=0.5,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::map(data,.f=function(.x){
-        tibble::tibble(logrankp=NA, coxp_categorical=NA, coxp_continus=NA)
-      })) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res)-> pfs_median
-    .combine %>%
-      dplyr::mutate(cutoff=0.75,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::map(data,.f=function(.x){
-        tibble::tibble(logrankp=NA, coxp_categorical=NA, coxp_continus=NA)
-      })) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res)-> pfs_upquantile
-    .combine %>%
-      dplyr::mutate(cutoff=0.25,sur_type="pfs") %>%
-      dplyr::mutate(survival_res = purrr::map(data,.f=function(.x){
-        tibble::tibble(logrankp=NA, coxp_categorical=NA, coxp_continus=NA)
-      })) %>%
-      dplyr::select(-data) %>%
-      dplyr::ungroup() %>%
-      tidyr::unnest(survival_res)-> pfs_lowquantile
+   tibble::tibble(logrankp=NA, coxp_categorical=NA, coxp_continus=NA,cutoff=0.5,sur_type="pfs") -> pfs_median
   }
   
   os_median %>%
-    rbind(os_lowquantile) %>%
-    rbind(os_upquantile) %>%
-    rbind(pfs_lowquantile) %>%
-    rbind(pfs_median) %>%
-    rbind(pfs_upquantile) %>%
-    tidyr::nest(survival=c(cutoff, sur_type, logrankp, coxp_categorical, coxp_continus))
+    rbind(pfs_median) -> tmp
+  tmp %>%
+    readr::write_rds(file.path(res_path,"cancer_gene_survival_separate",paste(.cancer_types,.symbol,"survival.exp.rds.gz",sep="_")),compress = "gz")
+  tmp
 }
