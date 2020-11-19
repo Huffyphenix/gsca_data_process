@@ -121,8 +121,10 @@ allmaf.IdTrans <- read.maf(maf=snv_data.IdTrans,
                              clinicalData = snv_clinical.IdTrans)
 allmaf.IdTrans %>%
   readr::write_rds(file.path(gsca_v2_path,"snv","all_maf_data.IdTrans.maf.rds.gz"),compress="gz")
+snv_data.IdTrans %>%
+  readr::write_rds(file.path(gsca_v2_path,"snv","all_maf_data.IdTrans.tsv.rds.gz"),compress = "gz")
 
-# cancer specific ---------------------------------------------------------
+# cancer specific maf ---------------------------------------------------------
 cancers_for_subset <- unique(snv_data.IdTrans$cancer_types)
 for (cancer in cancers_for_subset) {
   snv_clinical.IdTrans %>%
@@ -132,4 +134,11 @@ for (cancer in cancers_for_subset) {
   read.maf(maf = subset_snv,
            clinicalData = subset_clinical) %>%
     readr::write_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf",paste(cancer,"maf_data.IdTrans.maf.rds.gz",sep = "_")))
+}
+
+for (cancer in cancers_for_subset) {
+  snv_data.IdTrans %>%
+    dplyr::filter(cancer_types %in% cancer) -> subset_snv
+  subset_snv %>%
+    readr::write_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf_tsv",paste(cancer,"maf_data.IdTrans.tsv.rds.gz",sep = "_")))
 }
