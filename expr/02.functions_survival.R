@@ -51,26 +51,48 @@ fn_cox_logp <- function(.d){
       broom::tidy(survival::coxph(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)),
       error = function(e) {1}
     )
-    coxp_categorical <- cox_categorical$p.value
-    hr_categorical <- cox_categorical$estimate
+    if (!is.numeric(cox_categorical)) {
+      coxp_categorical <- cox_categorical$p.value
+      hr_categorical <- exp(cox_categorical$estimate)
+    } else {
+      coxp_categorical <- 1
+      hr_categorical <- 1
+    }
     
     cox_continus <- tryCatch(
     broom::tidy(survival::coxph(survival::Surv(time, status) ~ expr, data = .d, na.action = na.exclude)),
     error = function(e) {1}
     )
-    coxp_continus <- cox_continus$p.value
-    hr_continus <- cox_continus$estimate
+    if (!is.numeric(cox_categorical)) {
+      coxp_continus <- cox_continus$p.value
+      hr_continus <- exp(cox_continus$estimate)
+    } else {
+      coxp_continus <- 1
+      hr_continus <- 1
+    }
     
    if(hr_categorical>1){
      higher_risk_of_death <- "Lower expr."
-   }else{ higher_risk_of_death <- "Higher expr."}
+   }else if (hr_categorical<1){
+     higher_risk_of_death <- "Higher expr."
+   } else{
+     higher_risk_of_death <- NA
+     }
     
   } else {
     kmp<-1
     coxp_categorical<-1
     coxp_continus<-1
+    hr_continus <- 1
+    hr_categorical<- 1
+    higher_risk_of_death <- NA
   }
-  tibble::tibble(logrankp=kmp,coxp_categorical=coxp_categorical,hr_categorical=hr_categorical,coxp_continus=coxp_continus,hr_continus=hr_continus)
+  tibble::tibble(logrankp=kmp,
+                 coxp_categorical=coxp_categorical,
+                 hr_categorical=hr_categorical,
+                 coxp_continus=coxp_continus,
+                 hr_continus=hr_continus,
+                 higher_risk_of_death=higher_risk_of_death)
 }
 
 fn_survival <- function(.data,.cutoff,sur_type){
@@ -89,7 +111,7 @@ fn_survival_res <- function(.cancer_types,.expr,.symbol,.survival){
   print(paste(.cancer_types,.symbol))
   .survival %>%
     dplyr::filter(cancer_types == .cancer_types) %>%
-    tidyr::unnest() ->.survival
+    tidyr::unnest(cols = c(survival)) ->.survival
   if (length(grep("pfs",colnames(.survival)))>0) {
     .survival %>%
       dplyr::rename("sample_name"="barcode") %>%
@@ -140,9 +162,9 @@ fn_survival_res <- function(.cancer_types,.expr,.symbol,.survival){
     .combine %>%
       fn_survival(.cutoff=0.5,sur_type="pfs") %>%
       dplyr::mutate(cutoff=0.5,sur_type="pfs") -> pfs_median
-    
+
   } else {
-   tibble::tibble(logrankp=NA, coxp_categorical=NA, coxp_continus=NA,cutoff=0.5,sur_type="pfs") -> pfs_median
+   tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="pfs") -> pfs_median
   }
   
   os_median %>%
