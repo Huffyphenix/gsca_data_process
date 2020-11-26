@@ -63,21 +63,25 @@ fn_cox_logp <- function(.d){
     broom::tidy(survival::coxph(survival::Surv(time, status) ~ expr, data = .d, na.action = na.exclude)),
     error = function(e) {1}
     )
-    if (!is.numeric(cox_categorical)) {
+    if (!is.numeric(cox_continus)) {
       coxp_continus <- cox_continus$p.value
       hr_continus <- exp(cox_continus$estimate)
     } else {
       coxp_continus <- 1
       hr_continus <- 1
     }
-    
-   if(hr_categorical>1){
-     higher_risk_of_death <- "Lower expr."
-   }else if (hr_categorical<1){
-     higher_risk_of_death <- "Higher expr."
-   } else{
-     higher_risk_of_death <- NA
-     }
+    if(!is.na(hr_categorical)){
+      if(hr_categorical>1){
+        higher_risk_of_death <- "Lower expr."
+      }else if (hr_categorical<1){
+        higher_risk_of_death <- "Higher expr."
+      } else{
+        higher_risk_of_death <- NA
+      }
+    } else{
+      higher_risk_of_death <- NA
+    }
+   
     
   } else {
     kmp<-1
