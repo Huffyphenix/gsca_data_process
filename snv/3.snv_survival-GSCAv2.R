@@ -38,7 +38,7 @@ multidplyr::cluster_assign(cluster, gsca_v2_path=gsca_v2_path)
 
 
 tibble::tibble(cancer_types = cancer_types) %>%
-  dplyr::filter(!cancer_types %in% c("ACC","BLCA")) %>%
+  # dplyr::filter(!cancer_types %in% c("ACC","BLCA")) %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(survival_res = purrr::map(cancer_types,.f=fn_survival_res,.survival=survival)) %>%
   dplyr::collect() %>%

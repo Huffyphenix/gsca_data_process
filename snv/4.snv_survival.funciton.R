@@ -112,11 +112,11 @@ fn_survival_res <- function(.cancer_types,.survival){
       })) %>%
       tidyr::unnest(c(os_status)) -> .survival
   }
-  
-  .snv_data <- readr::read_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf_tsv",paste(.cancer_types,"maf_data.IdTrans.tsv.rds.gz",sep = "_"))) %>%
+  oncoplot_effective_mutation <- 
+  .snv_data <- readr::read_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf_tsv",paste(.cancer_types,"maf_data.IdTrans.tsv.rds.gz",sep = "_")))%>%
+    dplyr::mutate(group = ifelse(Variant_Classification %in% c("Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins"), "2_mutated","1_nonmutated")) %>%
     dplyr::mutate(sample_name=substr(Tumor_Sample_Barcode,1,12)) %>%
-    dplyr::select(Hugo_Symbol,entrez,sample_name) %>%
-    dplyr::mutate(group = "2_mutated")
+    dplyr::select(Hugo_Symbol,entrez,sample_name) 
   
   .snv_data$sample_name %>%
     unique() -> sample_with_snv
