@@ -39,14 +39,14 @@ multidplyr::cluster_assign(cluster, gsca_v2_path=gsca_v2_path)
 
 tibble::tibble(cancer_types = cancer_types) %>%
   # dplyr::filter(!cancer_types %in% c("ACC","BLCA")) %>%
+  multidplyr::partition(cluster = cluster) %>%
   dplyr::group_by(cancer_types) %>%
   dplyr::mutate(survival_res = purrr::map(cancer_types,.f=fn_survival_res,.survival=survival)) %>%
-  dplyr::collect() %>%
-  dplyr::select(-data)-> pan33_snv_survival
+  dplyr::collect()-> pan33_snv_survival
 
 
 pan33_snv_survival %>%
-  readr::write_rds(file.path(gsca_path,"snv","pan33_snv_survival.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(gsca_v2_path,"snv","pan33_snv_survival.rds.gz"),compress = "gz")
 
 save.image(file.path(git_path,"3.snv_survival-GSCAv2.rda"))
 parallel::stopCluster(cluster)
