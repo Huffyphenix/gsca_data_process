@@ -13,7 +13,7 @@ rda_path <- "/home/huff/github/gsca_data_process/trans_id/rda/"
 gscalite_path <- "/home/huff/data/GSCALite/TCGA"
 gsca_v2_path <- "/home/huff/data/GSCA"
 
-# read cnv gene info ------------------------------------------------
+# read snv gene info ------------------------------------------------
 
 snv_symbol_search_symbol <- readr::read_rds('trans_id/rda/snv_symbol_search_symbol_final.rds.gz')
 snv_symbol_entrez <- snv_symbol_search_symbol %>%
