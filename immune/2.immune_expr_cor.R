@@ -37,24 +37,42 @@ fn_correlation <- function(.immune,.expr,.cancers){
     tidyr::nest(-symbol,-cell_type,-entrez_id) %>%
     dplyr::mutate(cor = purrr::map(data,.f=fn_spm)) %>%
     dplyr::select(-data) %>%
-    tidyr::unnest(cor)
+    tidyr::unnest(cor) %>%
+    dplyr::mutate(cor=estimate)-> tmp
+  tmp%>%
+    readr::write_rds(file.path(data_path,"TIL/expr_immune",paste(.cancers,"exp_immune_seaprmancor.rds.gz",sep=".")),compress = "gz")
+  return(tmp)
 }
 
 fn_spm <- function(.data){
-  broom::tidy(cor.test(.data$TIL,.data$exp,method="kendall"))
+  broom::tidy(cor.test(.data$TIL,.data$exp,method="spearman"))
 }
 
 
 # Get the results ---------------------------------------------------------
+cancer_done <- list(dir(file.path(data_path,"TIL/expr_immune")) )%>%
+  purrr::pmap(.f=function(.x){strsplit(x = .x, split = '\\.')[[1]][1]}) %>% unlist()
+
+cluster <- multidplyr::new_cluster(3)
+multidplyr::cluster_library(cluster,"magrittr")
+multidplyr::cluster_assign(cluster, fn_correlation=fn_correlation)
+multidplyr::cluster_assign(cluster, fn_spm=fn_spm)
+multidplyr::cluster_assign(cluster, git_path=git_path)
+multidplyr::cluster_assign(cluster, data_path=data_path)
 
 combine_data %>%
+  dplyr::filter(!cancer_types %in% cancer_done) %>%
+  dplyr::group_by(cancer_types) %>%
+  multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(cor=purrr::pmap(list(ImmuneCellAI,expr,cancer_types),.f=fn_correlation)) %>%
+  dplyr::collect() %>%
   dplyr::select(-ImmuneCellAI,-expr) -> immune_expr_correlation
 
 
 # result output -----------------------------------------------------------
 
 immune_expr_correlation %>%
-  readr::write_rds(file.path(data_path,"TIL","pan33_ImmuneCellAI_cor_geneExp.rds.gz"))
+  readr::write_rds(file.path(data_path,"TIL","pan33_ImmuneCellAI_spearmancor_geneExp.rds.gz"))
 
-save.image(file = file.path(git_path,"rda","2.immune_exor_cor.rda"))
+save.image(file = file.path(git_path,"rda","2.immune_exor_spearmancor.rda"))
+parallel::stopCluster(cluster)
