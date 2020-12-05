@@ -1,34 +1,45 @@
 fn_wilcoxn <- function(.data){
-  wilcox <- tryCatch(
-    broom::tidy(wilcox.test(immune ~ group, data = .data)),
-    error = function(e) {1}
-  )
   .data %>%
     dplyr::group_by(group) %>%
-    dplyr::mutate(immune_mean = mean(immune)) %>%
-    dplyr::select(group,immune_mean) %>%
+    dplyr::mutate(n=dplyr::n()) %>%
+    dplyr::select(group,n) %>%
     unique() %>%
-    tidyr::spread(key="group",value="immune_mean") -> meanimmune
-  
-  logfc <- log2(meanimmune$`2_mutated`/(meanimmune$`1_nonmutated`+0.00001))
-  if(logfc>0){
-    Higher_immune_group <- "Mutated"
-  }else if(logfc<0){
-    Higher_immune_group <- "WT"
-  }else{
-    Higher_immune_group <- "NA"
-  }
-  if(!is.na(wilcox)){
-    if (!is.numeric(wilcox)) {
-      wilcox %>% dplyr::mutate(logfc=logfc,Higher_immune_group=Higher_immune_group)
-    } else {
+    dplyr::filter(n>1) -> len_group
+  if(nrow(len_group)>1){
+    wilcox <- tryCatch(
+      broom::tidy(wilcox.test(immune ~ group, data = .data)),
+      error = function(e) {1}
+    )
+    .data %>%
+      dplyr::group_by(group) %>%
+      dplyr::mutate(immune_mean = mean(immune)) %>%
+      dplyr::select(group,immune_mean) %>%
+      unique() %>%
+      tidyr::spread(key="group",value="immune_mean") -> meanimmune
+    
+    logfc <- log2(meanimmune$`2_mutated`/(meanimmune$`1_nonmutated`+0.00001))
+    if(logfc>0){
+      Higher_immune_group <- "Mutated"
+    }else if(logfc<0){
+      Higher_immune_group <- "WT"
+    }else{
+      Higher_immune_group <- "NA"
+    }
+    if(!is.na(wilcox)){
+      if (!is.numeric(wilcox)) {
+        wilcox %>% dplyr::mutate(logfc=logfc,Higher_immune_group=Higher_immune_group)
+      } else {
+        tibble::tibble()
+      }
+    }else {
       tibble::tibble()
     }
   }else {
     tibble::tibble()
   }
 }
-fn_res <- function(.combine_data){
+fn_res <- function(Hugo_Symbol, .combine_data){
+  #print(Hugo_Symbol)
   .combine_data %>%
     tidyr::gather(-barcode,-group,-aliquot,-sample_name,key="cell_type",value="immune") %>%
     dplyr::group_by(cell_type) %>%
@@ -64,7 +75,7 @@ fn_immune_snv <- function(.cancer_types,.immune){
   # os survival ----
   
   .combine %>%
-    dplyr::mutate(res = purrr::map(combine_data,fn_res)) %>%
+    dplyr::mutate(res = purrr::map2(Hugo_Symbol, combine_data,fn_res)) %>%
     dplyr::select(-combine_data) %>%
     tidyr::unnest(cols = c(res)) -> res
   message(glue::glue('complete {.cancer_types} snv-immune'))

@@ -19,7 +19,11 @@ source(file.path(git_path,"4.snv-immune_functions.R"))
 # snv data process ------------------------------------------------------------
 
 # calculation -------------------------------------------------------------
-cluster <- multidplyr::new_cluster(3)
+immune_cnv_file_list <- grep("*snv_immune_wilcox.rds.gz",dir(file.path(gsca_v2_path,"TIL/snv_immune")),value = TRUE)
+
+cancer_types_done <- purrr::map(immune_cnv_file_list,.f=function(.x){strsplit(.x,split = "\\.")[[1]][1]}) %>% unlist()
+
+cluster <- multidplyr::new_cluster(7)
 multidplyr::cluster_library(cluster,"magrittr")
 multidplyr::cluster_assign(cluster, fn_immune_snv=fn_immune_snv)
 multidplyr::cluster_assign(cluster, fn_res=fn_res)
@@ -29,6 +33,7 @@ multidplyr::cluster_assign(cluster, gsca_v2_path=gsca_v2_path)
 
 
 immune_cell_data %>%
+  dplyr::filter(!cancer_types %in% cancer_types_done) %>%
   dplyr::group_by(cancer_types) %>%
   # dplyr::filter(!cancer_types %in% c("ACC","BLCA")) %>%
   multidplyr::partition(cluster = cluster) %>%
