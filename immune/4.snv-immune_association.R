@@ -41,7 +41,7 @@ immune_cell_data %>%
   dplyr::collect() %>%
   dplyr::select(-ImmuneCellAI)-> pan33_snv_immune
 
-s
+
 pan33_snv_immune %>%
   readr::write_rds(file.path(gsca_v2_path,"TIL","pan33_ImmuneCellAI_cor_geneSNV.rds.gz"),compress = "gz")
 
