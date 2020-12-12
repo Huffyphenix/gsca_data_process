@@ -39,7 +39,7 @@ fn_cox_logp <- function(.d){
     dplyr::mutate(n=dplyr::n()) %>%
     dplyr::select(group,n) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(n>5) %>%
+    dplyr::filter(n>=1) %>%
     .$group %>% unique() %>% length() -> len_group
   if(len_group==2){
     kmp <- tryCatch(
@@ -174,6 +174,6 @@ fn_survival_res <- function(.cancer_types,.expr,.symbol,.survival){
   os_median %>%
     rbind(pfs_median) -> tmp
   tmp %>%
-    readr::write_rds(file.path(res_path,"cancer_gene_survival_separate",paste(.cancer_types,.symbol,"survival.exp.rds.gz",sep="_")),compress = "gz")
+    readr::write_rds(file.path(res_path,"cancer_gene_survival_separate_supplement",paste(.cancer_types,.symbol,"survival.exp.rds.gz",sep="_")),compress = "gz")
   tmp
 }

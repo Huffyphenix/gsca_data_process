@@ -30,11 +30,16 @@ expr %>%
   dplyr::select(-expr) %>%
   tidyr::unnest() -> expr_by_gene
 
-expr_sur_file_list <- grep("*_survival.exp.rds.gz",dir(file.path(data_path,"expr/cancer_gene_survival_separate")),value = TRUE)
-data_done <- purrr::pmap(list(expr_sur_file_list),.f=function(.x){strsplit(.x,split = "_survival")[[1]][1]}) %>% unlist() 
+expr_survival <- readr::read_rds(file = '/home/huff/data/GSCA/expr/pan33_expr_survival.rds.gz') 
+expr_survival %>%
+  dplyr::filter(logrankp==1) %>%
+  dplyr::select(cancer_types,symbol)%>%
+  dplyr::mutate(cancer_symbol = paste(cancer_types,symbol,sep="_")) -> expr_by_gene_need_recalculate
+  
 expr_by_gene %>%
   dplyr::mutate(cancer_symbol = paste(cancer_types,symbol,sep="_")) %>%
-  dplyr::filter(!cancer_symbol %in% data_done) -> expr_by_gene_not_done
+  dplyr::filter(cancer_symbol %in% expr_by_gene_need_recalculate$cancer_symbol) -> expr_by_gene_not_done
+
 # functions ---------------------------------------------------------------
 source("/home/huff/github/gsca_data_process/expr/02.functions_survival.R")
 
@@ -61,9 +66,9 @@ expr_by_gene_not_done %>%
   dplyr::collect() %>%
   dplyr::select(-data)-> pan33_expr_survival
 
-# pan33_expr_survival %>%
-#   tidyr::nest(-cancer_types) %>%
-#   readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival.rds.gz"),compress = "gz")
+pan33_expr_survival %>%
+  tidyr::nest(-cancer_types) %>%
+  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_supplement.rds.gz"),compress = "gz")
 
 save.image(file.path(git_path,"02.gene_expr_survival.rda"))
 parallel::stopCluster(cluster)
