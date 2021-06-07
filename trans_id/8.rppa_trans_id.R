@@ -30,11 +30,11 @@ pan32_gene_activate.inhibit_pathway_percent.rds.gz.IdTrans %>%
 
 # load rppa percent data ----------------------------------------------------------
 
-pan32_gene_AIN_sig_pval_class.siplification.rds.gz <- readr::read_rds(file.path(gscalite_path,"TCGA","rppa","pan32_gene_A-I-N_sig_pval_class.siplification.rds.gz"))
+pan32_gene_AIN_sig_pval_class.siplification.rds.gz <- readr::read_rds(file.path(gscalite_path,"TCGA","rppa","pan32_gene_A-I-N_percent.rds.gz"))
 
 # translate rppa percent id -----------------------------------------------
 pan32_gene_AIN_sig_pval_class.siplification.rds.gz %>%
-  dplyr::mutate(data=purrr::map(data,.f=function(.x){
+  dplyr::mutate(diff_pval=purrr::map(diff_pval,.f=function(.x){
     .x %>%
       dplyr::rename(TCGA_sym=symbol) %>%
       dplyr::inner_join(NCBI_id_in.with_TCGAsym,by="TCGA_sym") %>%
@@ -44,4 +44,4 @@ pan32_gene_AIN_sig_pval_class.siplification.rds.gz %>%
   })) -> pan32_gene_AIN_sig_pval_class.siplification.rds.gz.IdTrans
 
 pan32_gene_AIN_sig_pval_class.siplification.rds.gz.IdTrans %>%
-  readr::write_rds(file.path(gsca_v2_path,"rppa","pan32_gene_AIN_sig_pval_class.siplification.IdTrans.rds.gz"))
+  readr::write_rds(file.path(gsca_v2_path,"rppa","pan32_gene_AIN_pval.IdTrans.rds.gz"))
