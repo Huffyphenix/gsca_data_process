@@ -69,8 +69,8 @@ fn_parallel_stop <- function() {
 
 
 # calculation ---------------------------------------------------------------------
-fn_parallel_start(n_cores = 1)
-exp_subtype_test <- foreach(i = combine_data$cancer_types[1], .packages = c('magrittr')) %dopar% {
+fn_parallel_start(n_cores = 5)
+exp_subtype_test <- foreach(i = combine_data$cancer_types, .packages = c('magrittr')) %dopar% {
   fn_test(i)
 }
 fn_parallel_stop()
@@ -80,9 +80,17 @@ fn_parallel_stop()
 
 for (i in 1:length(exp_subtype_test)) {
   if(i==1){
-    exp_subtype_test[[i]] -> exp_subtype_test.arrange
+    exp_subtype_test[[i]] %>%
+      dplyr::select(entrez_id, symbol, p.value, method, cancer_types)-> exp_subtype_test.arrange
   }else{
-    rbind(exp_subtype_test.arrange, exp_subtype_test[[i]])-> exp_subtype_test.arrange
+    if(nrow(exp_subtype_test[[i]])>0){
+      exp_subtype_test[[i]] %>%
+        dplyr::select(entrez_id, symbol, p.value, method, cancer_types) %>%
+        rbind(exp_subtype_test.arrange)-> exp_subtype_test.arrange
+    }else{
+      exp_subtype_test.arrange -> exp_subtype_test.arrange
+    }
+    
   }
 }
 
@@ -91,5 +99,5 @@ exp_subtype_test.arrange %>%
 
 # save --------------------------------------------------------------------
 
-exp_subtype_test.arrange.nest %>%
-  readr::write_rds(file.path(gsca_path,"expr","expr_subtype.NEW.IdTrans.rds.gz"))
+exp_subtype_test %>%
+  readr::write_rds(file.path(gsca_path,"expr","expr_subtype.NEW.IdTrans.rds.gz"),compress = "gz")
