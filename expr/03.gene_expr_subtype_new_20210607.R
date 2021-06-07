@@ -99,5 +99,5 @@ exp_subtype_test.arrange %>%
 
 # save --------------------------------------------------------------------
 
-exp_subtype_test %>%
+exp_subtype_test.arrange.nest %>%
   readr::write_rds(file.path(gsca_path,"expr","expr_subtype.NEW.IdTrans.rds.gz"),compress = "gz")
