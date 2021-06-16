@@ -39,8 +39,8 @@ fn_cox_logp <- function(.d){
         cox_p <- coxp$p.value
         hr <- exp(coxp$estimate)
       } else {
-        cox_p <- 1
-        hr <- 1
+        cox_p <- NA
+        hr <- NA
       }
       
       if(!is.na(hr)){
@@ -56,14 +56,14 @@ fn_cox_logp <- function(.d){
       }
       
     } else {
-      kmp<-1
-      cox_p<-1
-      hr <- 1
+      kmp<-NA
+      cox_p<-NA
+      hr <- NA
       higher_risk_of_death <- NA
     }
     tibble::tibble(logrankp=kmp,cox_p=cox_p,hr=hr,higher_risk_of_death=higher_risk_of_death)
   } else {
-    tibble::tibble(logrankp=1,cox_p=1,hr=1,higher_risk_of_death=NA)
+    tibble::tibble(logrankp=NA,cox_p=NA,hr=NA,higher_risk_of_death=NA)
   }
 }
 
@@ -74,6 +74,7 @@ fn_survival <- function(.data,sur_type){
   
   .data %>%
     dplyr::select(sample_name,group,time=sur_type_do$time,status=sur_type_do$status) %>%
+    dplyr::filter(!is.na(time)) %>%
     fn_cox_logp()
 }
 
@@ -112,22 +113,41 @@ fn_survival_res <- function(.cancer_types,.survival){
       })) %>%
       tidyr::unnest(c(os_status)) -> .survival
   }
-  .snv_data <- readr::read_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf_tsv",paste(.cancer_types,"maf_data.IdTrans.tsv.rds.gz",sep = "_")))%>%
-    dplyr::mutate(group = ifelse(Variant_Classification %in% c("Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins"), "2_mutated","1_nonmutated")) %>%
-    dplyr::mutate(sample_name=substr(Tumor_Sample_Barcode,1,12)) %>%
-    dplyr::select(Hugo_Symbol,entrez,sample_name,group) 
   
-  .snv_data$sample_name %>%
-    unique() -> sample_with_snv
+  .snv_data <- readr::read_rds(file.path(gsca_v2_path,"snv","sub_cancer_maf_tsv",paste(.cancer_types,"maf_data.IdTrans.tsv.rds.gz",sep = "_")))%>%
+    dplyr::mutate(sample_name=substr(Tumor_Sample_Barcode,1,12)) %>%
+    dplyr::group_by(Hugo_Symbol,sample_name) %>%
+    tidyr::nest() %>%
+    dplyr::mutate(group = purrr::map(data,.f=function(.x){
+      .x %>%
+        dplyr::filter(Variant_Classification %in% c("Missense_Mutation","Nonsense_Mutation","Frame_Shift_Ins","Splice_Site","Frame_Shift_Del","In_Frame_Del","In_Frame_Ins")) -> .tmp
+      if(nrow(.tmp)>0){
+        "2_mutated"
+      }else{
+        "1_nonmutated"
+      }
+    })) %>%
+    tidyr::unnest() %>%
+    dplyr::select(Hugo_Symbol,entrez,sample_name,group) %>%
+    unique() %>%
+    dplyr::ungroup()
+  
+  sample_with_snv %>%
+    dplyr::filter(cancer_types == .cancer_types) %>%
+    tidyr::unnest() %>%
+    dplyr::mutate(sample_name=substr(sample_with_snv,1,12)) -> .sample_with_snv
+  
   .survival %>%
-    dplyr::filter(sample_name %in% sample_with_snv) -> .survival
+    dplyr::filter(sample_name %in% .sample_with_snv$sample_name) -> .survival
   
   .snv_data %>% 
     tidyr::nest(data=c(sample_name,group)) %>%
     dplyr::mutate(combine_data = purrr::map(data,.f=function(.x){
       .x %>%
-        dplyr::right_join(.survival,by="sample_name") %>%
-        dplyr::mutate(group = ifelse(is.na(group),"1_nonmutated",group))
+        dplyr::right_join(.sample_with_snv,by="sample_name") %>%
+        dplyr::mutate(group = ifelse(is.na(group),"1_nonmutated",group)) %>%
+        dplyr::inner_join(.survival,by="sample_name") %>%
+        dplyr::select(-sample_with_snv)
     })) %>%
     dplyr::select(-data) -> .combine
   

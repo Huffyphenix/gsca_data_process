@@ -22,6 +22,8 @@ sample_info$cancer_types %>% unique() -> cancer_types
 survival <- readr::read_rds(file.path(data_path,"clinical","pancan34_clinical_stage_survival_subtype.rds.gz")) %>%
   dplyr::select(cancer_types,survival)
 
+sample_with_snv <- readr::read_rds(file.path(data_path,"pancan33_sample_with_snv.rds.gz")) 
+
 # functions ---------------------------------------------------------------
 source("/home/huff/github/gsca_data_process/snv/4.snv_survival.funciton.R")
 
@@ -34,6 +36,7 @@ multidplyr::cluster_assign(cluster, fn_cox_logp=fn_cox_logp)
 multidplyr::cluster_assign(cluster, fn_survival=fn_survival)
 multidplyr::cluster_assign(cluster, res_path=res_path)
 multidplyr::cluster_assign(cluster, survival=survival)
+multidplyr::cluster_assign(cluster, sample_with_snv=sample_with_snv)
 multidplyr::cluster_assign(cluster, gsca_v2_path=gsca_v2_path)
 
 
@@ -46,7 +49,7 @@ tibble::tibble(cancer_types = cancer_types) %>%
 
 
 pan33_snv_survival %>%
-  readr::write_rds(file.path(gsca_v2_path,"snv","pan33_snv_survival.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(gsca_v2_path,"snv","pan33_snv_survival_NEW.rds.gz"),compress = "gz")
 
 save.image(file.path(git_path,"3.snv_survival-GSCAv2.rda"))
 parallel::stopCluster(cluster)
