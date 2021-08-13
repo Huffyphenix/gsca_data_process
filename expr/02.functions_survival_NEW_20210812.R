@@ -3,7 +3,7 @@ library(survival)
 library(dplyr)
 
 
-res_path <- file.path("/home/huff/data/GSCA","expr")
+res_path <- file.path("/home/huff/data/GSCA","expr","survival_new20210812")
 # transform samples barcode -----------------------------------------------
 
 fn_transform_samples <- function(.x) {
@@ -70,18 +70,21 @@ fn_cox_logp <- function(.d){
       coxp_continus <- NA
       hr_continus <- NA
     }
-    if(is.numeric(hr_categorical)){
-      if(hr_categorical>1){
-        higher_risk_of_death <- "Lower expr."
-      }else if (hr_categorical<1){
-        higher_risk_of_death <- "Higher expr."
+    if(!is.na(hr_categorical)){
+      if(is.numeric(hr_categorical)){
+        if(hr_categorical>1){
+          higher_risk_of_death <- "Lower expr."
+        }else if (hr_categorical<1){
+          higher_risk_of_death <- "Higher expr."
+        } else{
+          higher_risk_of_death <- "Unable to judge"
+        }
       } else{
-        higher_risk_of_death <- "Unable to judge"
+        higher_risk_of_death <- "Not applicable"
       }
-    } else{
+    }else{
       higher_risk_of_death <- "Not applicable"
     }
-    
     
   } else {
     kmp<-NA
@@ -151,6 +154,6 @@ fn_survival_res <- function(.cancer_types,.expr,.survival){
   os_median %>%
     rbind(pfs_median) -> tmp
   tmp %>%
-    readr::write_rds(file.path(res_path,"survival_new20210812",paste(.cancer_types,"survival.exp.rds.gz",sep="_")),compress = "gz")
+    readr::write_rds(file.path(res_path,paste(.cancer_types,"survival.exp.rds.gz",sep="_")),compress = "gz")
   tmp
 }
