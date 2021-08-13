@@ -19,8 +19,12 @@ sample_info <- readr::read_rds(file.path("/home/huff/data/GSCA/sample_info.rds.g
 
 sample_info$cancer_types %>% unique() -> cancer_types
 
-survival <- readr::read_rds(file.path(data_path,"clinical","pancan34_clinical_stage_survival_subtype.rds.gz")) %>%
-  dplyr::select(cancer_types,survival)
+survival <- readr::read_rds(file.path(data_path,"clinical","pancan33_survival_age_stage_NEW.rds.gz")) %>%
+  dplyr::mutate(survival=purrr::map(combine,.f=function(.x){
+    .x %>%
+      dplyr::select(sample_name=barcode,pfs_status, pfs_days,os_days, os_status)
+  })) %>%
+  dplyr::select(-combine)
 
 cnv <- readr::read_rds(file.path(data_path,"cnv","pancan34_cnv_threshold.IdTrans.rds.gz"))
 
@@ -30,7 +34,7 @@ survival %>%
 source("/home/huff/github/gsca_data_process/cnv_new/4.cnv_survival.function.R")
 
 # calculation -------------------------------------------------------------
-filelist <- dir("/home/huff/data/GSCA/cnv/cancer_cnv_survival") 
+filelist <- dir("/home/huff/data/GSCA/cnv/cancer_cnv_survival_210813") 
 cancer_done <- c()
 for (file in filelist) {
   cancer_done <- c(strsplit(file,"_")[[1]][1],cancer_done)
