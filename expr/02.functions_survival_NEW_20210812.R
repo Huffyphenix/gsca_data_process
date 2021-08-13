@@ -112,7 +112,7 @@ fn_survival <- function(.data,.cutoff,sur_type){
 }
 
 fn_survival_res <- function(.cancer_types,.expr,.survival){
-  # print(paste(.cancer_types))
+  print(.cancer_types)
   .survival %>%
     dplyr::filter(cancer_types == .cancer_types) %>%
     tidyr::unnest(cols = c(combine)) ->.survival_f
@@ -141,6 +141,8 @@ fn_survival_res <- function(.cancer_types,.expr,.survival){
         dplyr::mutate(res = purrr::map(data,fn_survival,.cutoff=0.5,sur_type="pfs")) %>%
         dplyr::select(-data) %>%
         tidyr::unnest() -> pfs_median
+    }else{
+      tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="pfs") -> pfs_median
     }
   } else {
     tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="pfs") -> pfs_median

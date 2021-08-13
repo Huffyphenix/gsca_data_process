@@ -34,7 +34,11 @@ expr <- readr::read_rds(file.path(data_path,"expr","pancan33_expr.IdTrans.rds.gz
 
 gene_symbol <- readr::read_rds('/home/huff/data/GSCA/id/NCBI_id_in_TCGA-final.rds.gz')
 
-# combine data ------------------------------------------------------------
+# cancer type done ------------------------------------------------------------
+tibble::tibble(done = list.files("/home/huff/data/GSCA/expr/survival_new20210812") ) %>%
+  dplyr::group_by(done) %>%
+  dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+  dplyr::ungroup() -> done_cancers
 
 
 # functions ---------------------------------------------------------------
@@ -57,6 +61,7 @@ multidplyr::cluster_assign(cluster, survival=survival)
 
 
 expr %>%
+  dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
   dplyr::group_by(cancer_types) %>%
   multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(survival_res = purrr::pmap(list(cancer_types,expr),.f=fn_survival_res,.survival=survival)) %>%
