@@ -27,15 +27,15 @@ survival_os %>%
   })) %>%
   dplyr::select(cancer_types,combine) -> survival
 
-survival %>% readr::write_rds(file.path(data_path,"clinical","pancan33_survival_NEW.rds.gz"))
-
 expr <- readr::read_rds(file.path(data_path,"expr","pancan33_expr.IdTrans.rds.gz"))
 
 
 gene_symbol <- readr::read_rds('/home/huff/data/GSCA/id/NCBI_id_in_TCGA-final.rds.gz')
 
 # cancer type done ------------------------------------------------------------
-tibble::tibble(done = list.files("/home/huff/data/GSCA/expr/survival_new20210812") ) %>%
+res_path <- file.path("/home/huff/data/GSCA","expr","survival_new20210812")
+
+tibble::tibble(done = list.files(res_path)) %>%
   dplyr::group_by(done) %>%
   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
   dplyr::ungroup() -> done_cancers
@@ -58,8 +58,6 @@ multidplyr::cluster_assign(cluster, res_path=res_path)
 multidplyr::cluster_assign(cluster, gene_symbol=gene_symbol)
 multidplyr::cluster_assign(cluster, survival=survival)
 
-
-
 expr %>%
   dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
   dplyr::group_by(cancer_types) %>%
@@ -68,9 +66,23 @@ expr %>%
   dplyr::collect() %>%
   dplyr::select(-data)-> pan33_expr_survival
 
-pan33_expr_survival %>%
-  tidyr::nest(-cancer_types) %>%
-  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_supplement.rds.gz"),compress = "gz")
+tibble::tibble(done = list.files(res_path)) %>%
+  dplyr::group_by(done) %>%
+  dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+  dplyr::ungroup() -> done_cancers
+
+expr_survival<-tibble::tibble()
+for (file in done_cancers$done) {
+  done_cancers %>%
+    dplyr::filter(done==file) -> tmp
+  tmp_res <- readr::read_rds(file.path(res_path,file)) %>%
+    dplyr::mutate(cancer_types=tmp$cancer_types) %>%
+    tidyr::nest(-cancer_types)
+  expr_survival<- rbind(expr_survival,tmp_res)
+}
+
+expr_survival %>%
+  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_NEW210813.rds.gz"))
 
 save.image(file.path(git_path,"02.gene_expr_survival.rda"))
 parallel::stopCluster(cluster)
