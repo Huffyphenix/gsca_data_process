@@ -2,6 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
+.rda
+.out
+.Rout
 immune/rda
 immune/*out
 cnv_new/*out
@@ -9,4 +12,9 @@ cnv_new/rda
 trans_id/rda
 trans_id/*out
 clinical/rda
-expr/*Rout
+expr/*out
+expr/rda
+expr/*.rda
+snv/rda
+snv/*.rda
+snv/*out
