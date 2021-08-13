@@ -24,7 +24,7 @@ fn_cox_logp <- function(.d){
     dplyr::mutate(n=dplyr::n()) %>%
     dplyr::select(group,n) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(n>5) %>%
+    dplyr::filter(n>=2) %>%
     .$group %>% unique() %>% length() -> len_group
   if(!is.na(len_group)){
     if(len_group>=2){
@@ -32,12 +32,23 @@ fn_cox_logp <- function(.d){
         1 - pchisq(survival::survdiff(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)$chisq, df = len_group - 1),
         error = function(e) {1}
       )
+      
+      coxp <- tryCatch(
+        broom::tidy(survival::coxph(survival::Surv(time, status) ~ group, data = .d, na.action = na.exclude)),
+        error = function(e) {1}
+      )
+      if (!is.numeric(coxp)) {
+        cox_p <- coxp
+      } else {
+        cox_p <- NA
+        hr <- NA
+      }
     } else {
       kmp<-NA
     }
-    tibble::tibble(logrankp=kmp)
+    tibble::tibble(logrankp=kmp,coxp=tidyr::nest(coxp))
   } else {
-    tibble::tibble(logrankp=NA)
+    tibble::tibble(logrankp=NA,coxp=tidyr::nest(NA))
   }
 }
 
@@ -52,37 +63,6 @@ fn_survival <- function(.data,sur_type){
 }
 
 fn_survival_res <- function(.cancer_types,.survival,.cnv){
-  
-  if (length(grep("pfs",colnames(.survival)))>0) {
-    .survival %>%
-      dplyr::rename("sample_name"="barcode") %>%
-      dplyr::mutate(os_status=purrr::map(os_status,.f=function(.x){
-        if(!is.na(.x)){
-          ifelse(.x=="Dead",1,0)
-        } else {
-          NA
-        }
-      })) %>%
-      dplyr::mutate(pfs_status =purrr::map(pfs_status,.f=function(.x){
-        if(!is.na(.x)){
-          ifelse(.x=="progression",1,0)
-        } else {
-          NA
-        }
-      })) %>%
-      tidyr::unnest(c(os_status, pfs_status)) -> .survival
-  }else {
-    .survival %>%
-      dplyr::rename("sample_name"="barcode") %>%
-      dplyr::mutate(os_status=purrr::map(os_status,.f=function(.x){
-        if(!is.na(.x)){
-          ifelse(.x=="Dead",1,0)
-        } else {
-          NA
-        }
-      })) %>%
-      tidyr::unnest(c(os_status)) -> .survival
-  }
   .cnv_data <- .cnv %>%
     tidyr::gather(-entrez,-symbol,key="barcode",value="cnv") %>%
     dplyr::inner_join(cnv_group,by="cnv") %>%
@@ -117,6 +97,6 @@ fn_survival_res <- function(.cancer_types,.survival,.cnv){
   }
   
   tmp %>%
-    readr::write_rds(file.path(res_path,"cancer_cnv_survival",paste(.cancer_types,"survival.cnv.rds.gz",sep="_")),compress = "gz")
+    readr::write_rds(file.path(res_path,"cancer_cnv_survival_210813",paste(.cancer_types,"survival.cnv.rds.gz",sep="_")),compress = "gz")
   tmp
 }
