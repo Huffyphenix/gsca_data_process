@@ -21,7 +21,7 @@ survival <- readr::read_rds(file.path(data_path,"clinical","pancan33_survival_ag
 methy <- readr::read_rds(file.path(data_path,"methy","pancan33_meth.IdTrans.rds.gz"))
 
 # cancer type done ------------------------------------------------------------
-res_path <- file.path("/home/huff/data/GSCA","meth","survival_new20210812")
+res_path <- file.path("/home/huff/data/GSCA","methy","survival_new20210812")
 
 # tibble::tibble(done = list.files(res_path)) %>%
 #   dplyr::group_by(done) %>%
@@ -69,7 +69,7 @@ for (file in done_cancers$done) {
 }
 
 methy_survival %>%
-  readr::write_rds(file.path(gsca_path,"methy","pan33_methy_survival_NEW210813.rds.gz"))
+  readr::write_rds(file.path(gsca_path,"methy","pan33_methy_survival_NEW210812.rds.gz"))
 
 save.image(file.path(git_path,"02.methy_survival.rda"))
 parallel::stopCluster(cluster)
