@@ -40,20 +40,20 @@ fn_cox_logp <- function(.d){
       if (!is.numeric(coxp)) {
         cox_p <- coxp
       } else {
-        cox_p <- NA
-        hr <- NA
+        cox_p <- tibble::tibble(term=NA,estimate=NA, std.error=NA,statistic=NA, p.value=NA)
       }
     } else {
       kmp<-NA
+      cox_p <- tibble::tibble(term=NA,estimate=NA, std.error=NA,statistic=NA, p.value=NA)
     }
-    tibble::tibble(logrankp=kmp,coxp=tidyr::nest(coxp))
+    tibble::tibble(logrankp=kmp,coxp=tidyr::nest(cox_p))
+    
   } else {
-    tibble::tibble(logrankp=NA,coxp=tidyr::nest(NA))
+    tibble::tibble(logrankp=NA,coxp=tidyr::nest("not avaliable"))
   }
 }
 
 fn_survival <- function(.data,sur_type){
-  
   survival_group %>%
     dplyr::filter(type==sur_type) -> sur_type_do
   
@@ -63,6 +63,7 @@ fn_survival <- function(.data,sur_type){
 }
 
 fn_survival_res <- function(.cancer_types,.survival,.cnv){
+  print(.cancer_types)
   .cnv_data <- .cnv %>%
     tidyr::gather(-entrez,-symbol,key="barcode",value="cnv") %>%
     dplyr::inner_join(cnv_group,by="cnv") %>%
