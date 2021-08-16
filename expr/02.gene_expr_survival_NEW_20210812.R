@@ -35,10 +35,10 @@ gene_symbol <- readr::read_rds('/home/huff/data/GSCA/id/NCBI_id_in_TCGA-final.rd
 # cancer type done ------------------------------------------------------------
 res_path <- file.path("/home/huff/data/GSCA","expr","survival_new20210812")
 
-tibble::tibble(done = list.files(res_path)) %>%
-  dplyr::group_by(done) %>%
-  dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
-  dplyr::ungroup() -> done_cancers
+# tibble::tibble(done = list.files(res_path)) %>%
+#   dplyr::group_by(done) %>%
+#   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+#   dplyr::ungroup() -> done_cancers
 
 
 # functions ---------------------------------------------------------------
@@ -59,7 +59,7 @@ multidplyr::cluster_assign(cluster, gene_symbol=gene_symbol)
 multidplyr::cluster_assign(cluster, survival=survival)
 
 expr %>%
-  dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
+  # dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
   dplyr::group_by(cancer_types) %>%
   multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(survival_res = purrr::pmap(list(cancer_types,expr),.f=fn_survival_res,.survival=survival)) %>%
@@ -82,7 +82,7 @@ for (file in done_cancers$done) {
 }
 
 expr_survival %>%
-  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_NEW210813.rds.gz"))
+  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_NEW210812.rds.gz"))
 
 save.image(file.path(git_path,"02.gene_expr_survival.rda"))
 parallel::stopCluster(cluster)
