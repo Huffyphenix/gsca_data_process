@@ -167,6 +167,6 @@ for (i in 1:length(stage_results)) {
   # dplyr::select(cancer_types,res) -> stage_results
 
 stage_results.arrange %>%
-  readr::write_rds(file.path(gsca_path,"expr","pan21_expr_with_stage-210813.rds.gz"),compress = "gz")
+  readr::write_rds(file.path(gsca_path,"expr","pan21_expr_with_pathologicStage-210813.rds.gz"),compress = "gz")
 
 save.image(file.path(git_path,"rda","gene_exp_with_stage-210813.rda"))
