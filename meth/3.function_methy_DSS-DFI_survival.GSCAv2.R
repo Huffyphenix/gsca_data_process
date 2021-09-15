@@ -140,7 +140,7 @@ fn_survival_res <- function(.cancer_types,.meth,.survival){
     tidyr::nest()-> .combine
   
   # dss survival ----
-  if (length(grep("dss",colnames(.survival)))>0) {
+  if (length(grep("dss",colnames(.survival_f)))>0) {
     .combine %>%
       dplyr::mutate(res = purrr::map(data,fn_survival,.cutoff=0.5,sur_type="dss")) %>%
       dplyr::select(-data) %>%

@@ -35,7 +35,7 @@ source("/home/huff/github/gsca_data_process/meth/3.function_methy_DSS-DFI_surviv
 
 
 # calculation -------------------------------------------------------------
-cluster <- multidplyr::new_cluster(5)
+cluster <- multidplyr::new_cluster(10)
 multidplyr::cluster_library(cluster,"magrittr")
 multidplyr::cluster_assign(cluster, fn_survival_res=fn_survival_res)
 multidplyr::cluster_assign(cluster, fn_transform_samples=fn_transform_samples)
@@ -47,7 +47,7 @@ multidplyr::cluster_assign(cluster, res_path=res_path)
 multidplyr::cluster_assign(cluster, survival=survival)
 
 methy %>%
-   dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
+  #dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
   dplyr::group_by(cancer_types) %>%
   multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(survival_res = purrr::pmap(list(cancer_types,methy),.f=fn_survival_res,.survival=survival)) %>%
