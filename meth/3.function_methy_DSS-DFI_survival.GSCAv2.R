@@ -154,16 +154,16 @@ fn_survival_res <- function(.cancer_types,.meth,.survival){
   
   # dfi survival -----
   if (length(grep("dfi",colnames(.survival_f)))>0) {
-    .survival_f %>% dplyr::filter(!is.na(.survival_f)) %>% nrow() -> .n_dfi
-    if(.n_dfi>0){
+    #.survival_f %>% dplyr::filter(!is.na(.survival_f)) %>% nrow() -> .n_dfi
+    #if(.n_dfi>0){
       .combine %>%
         dplyr::mutate(res = purrr::map(data,fn_survival,.cutoff=0.5,sur_type="dfi")) %>%
         dplyr::select(-data) %>%
         tidyr::unnest()  %>%
         dplyr::mutate(sur_type="dfi")-> dfi_median
-    }else{
-      tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="dfi") -> dfi_median
-    }
+    #}else{
+    #  tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="dfi") -> dfi_median
+    #}
   } else {
     tibble::tibble(logrankp=NA, hr_categorical=NA,coxp_categorical=NA, coxp_continus=NA,hr_continus=NA,higher_risk_of_death=NA,cutoff=0.5,sur_type="dfi") -> dfi_median
   }
