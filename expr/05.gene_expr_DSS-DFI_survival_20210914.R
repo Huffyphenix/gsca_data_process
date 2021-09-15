@@ -54,13 +54,13 @@ expr %>%
   multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(survival_res = purrr::pmap(list(cancer_types,expr),.f=fn_survival_res,.survival=survival)) %>%
   dplyr::collect() %>%
-  dplyr::select(-data)-> pan33_expr_survival
+  dplyr::select(-expr)-> pan33_expr_survival
+
 
 tibble::tibble(done = list.files(res_path)) %>%
-  dplyr::group_by(done) %>%
-  dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
-  dplyr::ungroup() -> done_cancers
-
+   dplyr::group_by(done) %>%
+   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+   dplyr::ungroup() -> done_cancers
 expr_survival<-tibble::tibble()
 for (file in done_cancers$done) {
   done_cancers %>%
@@ -72,7 +72,7 @@ for (file in done_cancers$done) {
 }
 
 expr_survival %>%
-  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_survival_NEW210812.rds.gz"))
+  readr::write_rds(file.path(gsca_path,"expr","pan33_expr_DSS-DFI_survival_210914.rds.gz"))
 
 save.image(file.path(git_path,"05.gene_expr_DSS-DFI_survival.rda"))
 parallel::stopCluster(cluster)
