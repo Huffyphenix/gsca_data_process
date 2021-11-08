@@ -3,7 +3,7 @@ library(survival)
 library(dplyr)
 
 
-res_path <- file.path("/home/huff/data/GSCA","methy","DSS-DFI_survival_210914")
+res_path <- file.path("/home/huff/data/GSCA","methy","DSS-DFI_survival_211108")
 # transform samples barcode -----------------------------------------------
 
 fn_transform_samples <- function(.x) {
@@ -15,7 +15,7 @@ fn_transform_samples <- function(.x) {
     dplyr::mutate(tmp = substr(x = aliquot, start = 14, stop = 14)) %>% 
     dplyr::mutate(type = ifelse(tmp == '0', 'tumor', 'normal')) %>% 
     dplyr::mutate(sample_name = substr(x = aliquot, start = 1, stop = 12)) %>%
-    dplyr::group_by(entrez, symbol,  gene,sample_name) %>%
+    dplyr::group_by(entrez, symbol,  gene,sample_name,type) %>%
     dplyr::mutate(meth = mean(meth)) %>%
     dplyr::select(-aliquot ) %>%
     unique()

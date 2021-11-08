@@ -22,12 +22,12 @@ survival <- readr::read_rds(file.path(data_path,"TCGA_pancan_cancer_cell_surviva
 methy <- readr::read_rds(file.path(gsca_path,"methy","pancan33_meth.IdTrans.rds.gz"))
 
 # cancer type done ------------------------------------------------------------
-res_path <- file.path("/home/huff/data/GSCA","methy","DSS-DFI_survival_210914")
+res_path <- file.path("/home/huff/data/GSCA","methy","DSS-DFI_survival_211108")
 
- tibble::tibble(done = list.files(res_path)) %>%
-   dplyr::group_by(done) %>%
-   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
-   dplyr::ungroup() -> done_cancers
+ # tibble::tibble(done = list.files(res_path)) %>%
+ #   dplyr::group_by(done) %>%
+ #   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+ #   dplyr::ungroup() -> done_cancers
 
 
 # functions ---------------------------------------------------------------

@@ -21,7 +21,7 @@ survival <- readr::read_rds(file.path(data_path,"clinical","pancan33_survival_ag
 methy <- readr::read_rds(file.path(data_path,"methy","pancan33_meth.IdTrans.rds.gz"))
 
 # cancer type done ------------------------------------------------------------
-res_path <- file.path("/home/huff/data/GSCA","methy","survival_new20210812")
+res_path <- file.path("/home/huff/data/GSCA","methy","survival_new20211108")
 
 # tibble::tibble(done = list.files(res_path)) %>%
 #   dplyr::group_by(done) %>%
