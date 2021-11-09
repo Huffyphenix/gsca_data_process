@@ -23,10 +23,10 @@ methy <- readr::read_rds(file.path(data_path,"methy","pancan33_meth.IdTrans.rds.
 # cancer type done ------------------------------------------------------------
 res_path <- file.path("/home/huff/data/GSCA","methy","survival_new20211108")
 
-# tibble::tibble(done = list.files(res_path)) %>%
-#   dplyr::group_by(done) %>%
-#   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
-#   dplyr::ungroup() -> done_cancers
+ tibble::tibble(done = list.files(res_path)) %>%
+   dplyr::group_by(done) %>%
+   dplyr::mutate(cancer_types = strsplit(done,"_")[[1]][1]) %>%
+   dplyr::ungroup() -> done_cancers
 
 
 # functions ---------------------------------------------------------------
@@ -34,7 +34,7 @@ source("/home/huff/github/gsca_data_process/meth/2.function-methy-survival.GSCAv
 
 
 # calculation -------------------------------------------------------------
-cluster <- multidplyr::new_cluster(5)
+cluster <- multidplyr::new_cluster(7)
 multidplyr::cluster_library(cluster,"magrittr")
 multidplyr::cluster_assign(cluster, fn_survival_res=fn_survival_res)
 multidplyr::cluster_assign(cluster, fn_transform_samples=fn_transform_samples)
@@ -46,7 +46,7 @@ multidplyr::cluster_assign(cluster, res_path=res_path)
 multidplyr::cluster_assign(cluster, survival=survival)
 
 methy %>%
-  # dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
+  dplyr::filter(!cancer_types %in% done_cancers$cancer_types ) %>%
   dplyr::group_by(cancer_types) %>%
   multidplyr::partition(cluster = cluster) %>%
   dplyr::mutate(survival_res = purrr::pmap(list(cancer_types,methy),.f=fn_survival_res,.survival=survival)) %>%
@@ -69,7 +69,7 @@ for (file in done_cancers$done) {
 }
 
 methy_survival %>%
-  readr::write_rds(file.path(gsca_path,"methy","pan33_methy_survival_NEW210812.rds.gz"))
+  readr::write_rds(file.path(gsca_path,"methy","pan33_methy_survival_NEW211108.rds.gz"))
 
 save.image(file.path(git_path,"02.methy_survival.rda"))
 parallel::stopCluster(cluster)
